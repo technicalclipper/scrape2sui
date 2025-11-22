@@ -1,5 +1,6 @@
 // Walrus storage integration
-// Based on the Seal examples pattern
+// Based on official Walrus documentation: https://docs.wal.app/usage/web-api.html
+// Uses direct publisher endpoints with PUT /v1/blobs?epochs={epochs}
 
 export interface WalrusService {
   id: string
@@ -8,50 +9,60 @@ export interface WalrusService {
   aggregatorUrl: string
 }
 
-// Default Walrus services from Seal examples
+// Official Walrus testnet publisher (from docs.wal.app)
+// According to https://docs.wal.app/usage/web-api.html#using-a-public-aggregator-or-publisher
+// The main public testnet publisher is: https://publisher.walrus-testnet.walrus.space
+// Individual publisher services may also be available but can be unreliable
 export const DEFAULT_WALRUS_SERVICES: WalrusService[] = [
+  {
+    id: "official-testnet",
+    name: "Official Testnet Publisher",
+    publisherUrl: "https://publisher.walrus-testnet.walrus.space",
+    aggregatorUrl: "https://aggregator.walrus-testnet.walrus.space",
+  },
+  // Fallback to individual services if main publisher is unavailable
   {
     id: "service1",
     name: "walrus.space",
-    publisherUrl: "/publisher1",
-    aggregatorUrl: "/aggregator1",
+    publisherUrl: "https://walrus.space/publisher1",
+    aggregatorUrl: "https://walrus.space/aggregator1",
   },
   {
     id: "service2",
     name: "staketab.org",
-    publisherUrl: "/publisher2",
-    aggregatorUrl: "/aggregator2",
+    publisherUrl: "https://staketab.org/publisher2",
+    aggregatorUrl: "https://staketab.org/aggregator2",
   },
   {
     id: "service3",
     name: "redundex.com",
-    publisherUrl: "/publisher3",
-    aggregatorUrl: "/aggregator3",
+    publisherUrl: "https://redundex.com/publisher3",
+    aggregatorUrl: "https://redundex.com/aggregator3",
   },
   {
     id: "service4",
     name: "nodes.guru",
-    publisherUrl: "/publisher4",
-    aggregatorUrl: "/aggregator4",
+    publisherUrl: "https://nodes.guru/publisher4",
+    aggregatorUrl: "https://nodes.guru/aggregator4",
   },
   {
     id: "service5",
     name: "banansen.dev",
-    publisherUrl: "/publisher5",
-    aggregatorUrl: "/aggregator5",
+    publisherUrl: "https://banansen.dev/publisher5",
+    aggregatorUrl: "https://banansen.dev/aggregator5",
   },
   {
     id: "service6",
     name: "everstake.one",
-    publisherUrl: "/publisher6",
-    aggregatorUrl: "/aggregator6",
+    publisherUrl: "https://everstake.one/publisher6",
+    aggregatorUrl: "https://everstake.one/aggregator6",
   },
 ]
 
 export interface WalrusUploadOptions {
   encryptedData: Uint8Array
   epochs?: number
-  service?: WalrusService
+  service?: WalrusService // Optional: override default service
 }
 
 export interface WalrusUploadResult {
@@ -84,34 +95,68 @@ export interface WalrusResponse {
   }
 }
 
+/**
+ * Get the publisher URL for Walrus blob upload
+ * The publisher endpoint is: {publisherUrl}/v1/blobs?epochs={epochs}
+ */
 function getPublisherUrl(path: string, service: WalrusService): string {
   const cleanPath = path.replace(/^\/+/, "").replace(/^v1\//, "")
-  return `${service.publisherUrl}/v1/${cleanPath}`
+  const baseUrl = service.publisherUrl.endsWith("/")
+    ? service.publisherUrl.slice(0, -1)
+    : service.publisherUrl
+  return `${baseUrl}/v1/${cleanPath}`
 }
 
-function getAggregatorUrl(path: string, service: WalrusService): string {
-  const cleanPath = path.replace(/^\/+/, "").replace(/^v1\//, "")
-  return `${service.aggregatorUrl}/v1/${cleanPath}`
-}
-
-export async function uploadToWalrus(
-  options: WalrusUploadOptions
+/**
+ * Upload to a single Walrus service with timeout
+ */
+async function uploadToSingleService(
+  service: WalrusService,
+  encryptedData: Uint8Array,
+  epochs: number,
+  timeoutMs: number = 10000
 ): Promise<WalrusUploadResult> {
-  const { encryptedData, epochs = 1, service = DEFAULT_WALRUS_SERVICES[0] } = options
-
   const publisherUrl = getPublisherUrl(`/v1/blobs?epochs=${epochs}`, service)
+  
+  console.log(`Uploading to Walrus: ${publisherUrl}`)
+  
+  // Create AbortController for timeout
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
 
   try {
+    // Convert Uint8Array to a format fetch accepts
+    // Create a new Uint8Array to ensure it's a standard ArrayBufferView
+    const dataArray = new Uint8Array(encryptedData)
+    const blob = new Blob([dataArray], { type: "application/octet-stream" })
+    
     const response = await fetch(publisherUrl, {
       method: "PUT",
-      body: encryptedData,
+      body: blob,
       headers: {
         "Content-Type": "application/octet-stream",
       },
+      signal: controller.signal,
     })
 
+    clearTimeout(timeoutId)
+
     if (!response.ok) {
-      throw new Error(`Walrus upload failed: ${response.status} ${response.statusText}`)
+      // Try to get error text, but limit it to avoid huge HTML responses
+      let errorText = response.statusText
+      try {
+        const text = await response.text()
+        // If it's HTML (like Cloudflare error pages), just use status
+        if (!text.startsWith("<!DOCTYPE") && text.length < 500) {
+          errorText = text
+        }
+      } catch {
+        // Ignore parsing errors
+      }
+      
+      throw new Error(
+        `Walrus upload failed: ${response.status} ${errorText}`
+      )
     }
 
     const result: WalrusResponse = await response.json()
@@ -138,27 +183,50 @@ export async function uploadToWalrus(
       throw new Error("Unexpected Walrus response format")
     }
   } catch (error) {
-    // Try fallback services if first one fails
-    if (service.id !== DEFAULT_WALRUS_SERVICES[0].id) {
-      throw error
+    clearTimeout(timeoutId)
+    
+    if (error instanceof Error && error.name === "AbortError") {
+      throw new Error(`Request timeout after ${timeoutMs}ms`)
     }
-
-    // Try other services
-    for (const fallbackService of DEFAULT_WALRUS_SERVICES.slice(1)) {
-      try {
-        return await uploadToWalrus({
-          encryptedData,
-          epochs,
-          service: fallbackService,
-        })
-      } catch {
-        // Continue to next service
-      }
-    }
-
-    throw new Error(
-      `Failed to upload to Walrus after trying all services: ${error instanceof Error ? error.message : String(error)}`
-    )
+    throw error
   }
+}
+
+export async function uploadToWalrus(
+  options: WalrusUploadOptions
+): Promise<WalrusUploadResult> {
+  const { encryptedData, epochs = 1, service = DEFAULT_WALRUS_SERVICES[0] } = options
+
+  // If a specific service is provided, only try that one
+  if (service.id !== DEFAULT_WALRUS_SERVICES[0].id) {
+    return uploadToSingleService(service, encryptedData, epochs)
+  }
+
+  // Try all services in parallel for faster failure detection
+  const servicesToTry = DEFAULT_WALRUS_SERVICES
+  const errors: Error[] = []
+
+  for (const walrusService of servicesToTry) {
+    try {
+      console.log(`Trying ${walrusService.name}...`)
+      return await uploadToSingleService(walrusService, encryptedData, epochs, 8000) // 8 second timeout per service
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error)
+      console.warn(`${walrusService.name} failed: ${errorMessage}`)
+      errors.push(error instanceof Error ? error : new Error(String(error)))
+      // Continue to next service
+    }
+  }
+
+  // All services failed
+  const errorSummary = errors
+    .map((e, i) => `${servicesToTry[i].name}: ${e.message}`)
+    .join("; ")
+  
+  throw new Error(
+    `Failed to upload to Walrus after trying all ${servicesToTry.length} services. ` +
+    `All services appear to be unavailable (connection timeouts). ` +
+    `Please try again later. Errors: ${errorSummary}`
+  )
 }
 

@@ -30,8 +30,12 @@ Create a `.env.local` file in the `registry-app` directory:
 
 ```env
 # Sui Contract Configuration (Required)
-# This is the package ID of your Move contract that contains seal_approve functions
+# This is the package ID of your Move contract (ai_paywall::registry)
 SUI_PACKAGE_ID=0x6813c38e75aa12141e8047a082edec4242e1f0fff47e2a3c886d760b04a4ec4f
+
+# Registry Object ID (Required)
+# The shared Registry object ID created when the contract was initialized
+SUI_REGISTRY_ID=0x...
 
 # Sui Network (default: testnet)
 SUI_NETWORK=testnet
@@ -39,6 +43,12 @@ SUI_NETWORK=testnet
 # Seal Configuration (Optional)
 # Threshold for Seal encryption (default: 2)
 SEAL_THRESHOLD=2
+
+# Server-side Registration (Optional)
+# If provided, the server will automatically register resources on-chain
+# Format: hex-encoded private key (64 characters, no 0x prefix)
+# WARNING: Only use this in secure environments with a dedicated account
+SUI_SERVER_PRIVATE_KEY=...
 ```
 
 ### Development
@@ -92,16 +102,15 @@ registry-app/
 - ✅ API Route Structure
 - ✅ Seal Encryption Integration (using @mysten/seal SDK)
 - ✅ Walrus Storage Integration (using Walrus publisher endpoints)
-- ⏳ Sui Contract Registration (pending contract details - ready to integrate)
+- ✅ Sui Contract Registration (integrated with ai_paywall::registry contract)
 
 ## Next Steps
 
-1. **Sui Contract Integration**: Add contract interaction when contract details are provided
-   - The contract should have a `seal_approve*` function for access control
-   - Register domain, resource, walrusCid, and sealPolicyId on-chain
-2. **Error Handling**: Enhance error handling and retry logic for Seal/Walrus operations
-3. **File Validation**: Add file type and size validation
-4. **Access Control Policy**: Implement the `seal_approve` function in your Move contract
+1. **Deploy Contract**: Deploy the `ai_paywall_registry.move` contract and set `SUI_REGISTRY_ID`
+2. **Client-side Signing**: For production, implement wallet integration for client-side transaction signing
+3. **Error Handling**: Enhance error handling and retry logic for Seal/Walrus/Sui operations
+4. **File Validation**: Add file type and size validation
+5. **Access Pass Purchase**: Implement the purchase flow using the contract's `purchase_pass` function
 
 ## Technologies
 

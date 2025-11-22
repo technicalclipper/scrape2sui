@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label"
 import { Progress } from "@/components/ui/progress"
 import { FileUpload } from "@/components/file-upload"
 
-type ProcessStep = "idle" | "uploading" | "encrypting" | "storing" | "success" | "error"
+type ProcessStep = "idle" | "uploading" | "encrypting" | "storing" | "registering" | "success" | "error"
 
 interface RegistryResult {
   walrusCid: string
@@ -19,9 +19,12 @@ interface RegistryResult {
   domain?: string
   resource?: string
   endEpoch?: string
-  suiObjectId?: string
+  walrusObjectId?: string
   fileName?: string
   fileSize?: number
+  suiTxDigest?: string
+  suiResourceId?: string
+  requiresClientSigning?: boolean
 }
 
 export default function RegistryPage() {
@@ -29,6 +32,9 @@ export default function RegistryPage() {
   const [domain, setDomain] = useState("")
   const [resource, setResource] = useState("")
   const [price, setPrice] = useState("0.1")
+  const [receiver, setReceiver] = useState("")
+  const [maxUses, setMaxUses] = useState("5")
+  const [validityDuration, setValidityDuration] = useState("86400000") // 24 hours in ms
   const [processStep, setProcessStep] = useState<ProcessStep>("idle")
   const [progress, setProgress] = useState(0)
   const [result, setResult] = useState<RegistryResult | null>(null)
@@ -67,18 +73,26 @@ export default function RegistryPage() {
       // Step 1: Upload file
       const formData = new FormData()
       formData.append("file", selectedFile)
-      formData.append("domain", domain)
-      formData.append("resource", resource)
+      formData.append("domain", domain.trim())
+      formData.append("resource", resource.trim())
       formData.append("price", price)
+      formData.append("receiver", receiver.trim() || "") // Optional - will use signer address if not provided
+      formData.append("maxUses", maxUses)
+      formData.append("validityDuration", validityDuration)
 
-      setProgress(30)
+      setProgress(10)
+      setProcessStep("uploading")
 
       // Step 2: Encrypt with Seal
       setProcessStep("encrypting")
-      setProgress(50)
+      setProgress(30)
 
       // Step 3: Store to Walrus
       setProcessStep("storing")
+      setProgress(60)
+
+      // Step 4: Register on-chain
+      setProcessStep("registering")
       setProgress(80)
 
       const response = await fetch("/api/registry/register", {
@@ -107,6 +121,9 @@ export default function RegistryPage() {
     setDomain("")
     setResource("")
     setPrice("0.1")
+    setReceiver("")
+    setMaxUses("5")
+    setValidityDuration("86400000")
     setProcessStep("idle")
     setProgress(0)
     setResult(null)
@@ -189,14 +206,66 @@ export default function RegistryPage() {
                 />
               </div>
 
+              {/* Receiver Address (Optional) */}
+              <div className="space-y-2">
+                <Label htmlFor="receiver">Payment Receiver Address (Optional)</Label>
+                <Input
+                  id="receiver"
+                  placeholder="0x..."
+                  value={receiver}
+                  onChange={(e) => setReceiver(e.target.value)}
+                  disabled={processStep !== "idle" && processStep !== "error"}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Address that receives payment. If empty, uses the signer address.
+                </p>
+              </div>
+
+              {/* Max Uses */}
+              <div className="space-y-2">
+                <Label htmlFor="maxUses">Max Uses Per Pass</Label>
+                <Input
+                  id="maxUses"
+                  type="number"
+                  min="1"
+                  placeholder="5"
+                  value={maxUses}
+                  onChange={(e) => setMaxUses(e.target.value)}
+                  disabled={processStep !== "idle" && processStep !== "error"}
+                  required
+                />
+                <p className="text-xs text-muted-foreground">
+                  Number of times an AccessPass can be used before expiring
+                </p>
+              </div>
+
+              {/* Validity Duration */}
+              <div className="space-y-2">
+                <Label htmlFor="validityDuration">Validity Duration (milliseconds)</Label>
+                <Input
+                  id="validityDuration"
+                  type="number"
+                  min="0"
+                  placeholder="86400000"
+                  value={validityDuration}
+                  onChange={(e) => setValidityDuration(e.target.value)}
+                  disabled={processStep !== "idle" && processStep !== "error"}
+                  required
+                />
+                <p className="text-xs text-muted-foreground">
+                  Pass validity duration in milliseconds (86400000 = 24 hours, 0 = no expiry)
+                </p>
+              </div>
+
               {/* Progress Indicator */}
-              {(processStep === "uploading" || processStep === "encrypting" || processStep === "storing") && (
+              {(processStep === "uploading" || processStep === "encrypting" || processStep === "storing" || processStep === "registering") && (
                 <div className="space-y-2">
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-muted-foreground">
                       {processStep === "uploading" && "Uploading file..."}
                       {processStep === "encrypting" && "Encrypting with Seal..."}
                       {processStep === "storing" && "Storing to Walrus..."}
+                      {processStep === "registering" && "Registering on Sui blockchain..."}
                     </span>
                     <span className="text-muted-foreground">{progress}%</span>
                   </div>
@@ -239,16 +308,35 @@ export default function RegistryPage() {
                         <Label className="text-xs text-muted-foreground">Resource</Label>
                         <p className="text-sm">{result.resource}</p>
                       </div>
-                      {result.suiObjectId && (
+                      {result.walrusObjectId && (
                         <div className="space-y-1">
-                          <Label className="text-xs text-muted-foreground">Sui Object ID</Label>
-                          <p className="text-sm font-mono break-all">{result.suiObjectId}</p>
+                          <Label className="text-xs text-muted-foreground">Walrus Object ID</Label>
+                          <p className="text-sm font-mono break-all">{result.walrusObjectId}</p>
                         </div>
                       )}
                       {result.endEpoch && (
                         <div className="space-y-1">
                           <Label className="text-xs text-muted-foreground">Storage End Epoch</Label>
                           <p className="text-sm">{result.endEpoch}</p>
+                        </div>
+                      )}
+                      {result.suiTxDigest && (
+                        <div className="space-y-1">
+                          <Label className="text-xs text-muted-foreground">Sui Transaction Digest</Label>
+                          <p className="text-sm font-mono break-all">{result.suiTxDigest}</p>
+                        </div>
+                      )}
+                      {result.suiResourceId && (
+                        <div className="space-y-1">
+                          <Label className="text-xs text-muted-foreground">Resource Entry ID</Label>
+                          <p className="text-sm font-mono break-all">{result.suiResourceId}</p>
+                        </div>
+                      )}
+                      {result.requiresClientSigning && (
+                        <div className="p-3 rounded-md bg-yellow-500/10 border border-yellow-500/20">
+                          <p className="text-xs text-yellow-600 dark:text-yellow-400">
+                            ⚠️ Transaction requires client-side signing. Please sign the transaction in your wallet.
+                          </p>
                         </div>
                       )}
                     </div>
@@ -277,7 +365,7 @@ export default function RegistryPage() {
                       Encrypt & Register
                     </>
                   )}
-                  {(processStep === "uploading" || processStep === "encrypting" || processStep === "storing") && (
+                  {(processStep === "uploading" || processStep === "encrypting" || processStep === "storing" || processStep === "registering") && (
                     <>
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                       Processing...

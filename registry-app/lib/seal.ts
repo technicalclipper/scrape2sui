@@ -1,6 +1,5 @@
 import { SealClient } from "@mysten/seal"
 import { SuiClient, getFullnodeUrl } from "@mysten/sui/client"
-import { fromHex } from "@mysten/sui/utils"
 
 // Seal key server object IDs for testnet
 // These are the verified key servers from the Seal examples
@@ -41,6 +40,16 @@ export interface EncryptOptions {
   threshold?: number
 }
 
+/**
+ * Normalize hex string for Seal (remove 0x prefix, ensure lowercase)
+ */
+function normalizeHexString(hex: string): string {
+  // Remove 0x prefix if present
+  const cleaned = hex.startsWith("0x") ? hex.slice(2) : hex
+  // Ensure lowercase (Seal expects lowercase hex)
+  return cleaned.toLowerCase()
+}
+
 export async function encryptWithSeal(
   client: SealClient,
   options: EncryptOptions
@@ -48,10 +57,14 @@ export async function encryptWithSeal(
   const { packageId, id, data, threshold = 2 } = options
 
   try {
+    // Seal expects packageId and id as normalized hex strings (lowercase, no 0x prefix)
+    const normalizedPackageId = normalizeHexString(packageId)
+    const normalizedId = normalizeHexString(id)
+
     const result = await client.encrypt({
       threshold,
-      packageId: fromHex(packageId),
-      id: fromHex(id),
+      packageId: normalizedPackageId,
+      id: normalizedId,
       data,
     })
 
