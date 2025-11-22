@@ -70,14 +70,34 @@ export async function POST(request: NextRequest) {
     let signer: Ed25519Keypair | undefined
     if (process.env.SUI_SERVER_PRIVATE_KEY) {
       try {
-        const privateKey = fromHex(process.env.SUI_SERVER_PRIVATE_KEY)
-        signer = Ed25519Keypair.fromSecretKey(privateKey)
+        const privateKey = process.env.SUI_SERVER_PRIVATE_KEY.trim()
+        
+        // Handle both Bech32 format (suiprivkey...) and hex format
+        if (privateKey.startsWith("suiprivkey")) {
+          // Bech32 format - Ed25519Keypair.fromSecretKey can decode this directly
+          signer = Ed25519Keypair.fromSecretKey(privateKey)
+        } else {
+          // Hex format - remove 0x prefix if present and convert
+          const hexKey = privateKey.startsWith("0x") ? privateKey.slice(2) : privateKey
+          const privateKeyBytes = fromHex(hexKey)
+          signer = Ed25519Keypair.fromSecretKey(privateKeyBytes)
+        }
+        
         // If no receiver provided, use signer's address
         if (!receiver && signer) {
           receiver = signer.toSuiAddress()
         }
+        console.log(`Using signer address: ${receiver}`)
       } catch (error) {
-        console.warn("Failed to parse SUI_SERVER_PRIVATE_KEY, will require client-side signing")
+        console.error("Failed to parse SUI_SERVER_PRIVATE_KEY:", error)
+        return NextResponse.json(
+          {
+            error: "Invalid SUI_SERVER_PRIVATE_KEY format",
+            details: "The private key must be in Bech32 format (suiprivkey...) or hex format. " +
+                     "Use 'sui keytool export --key-identity <address>' to get the Bech32 format.",
+          },
+          { status: 500 }
+        )
       }
     }
     
@@ -111,41 +131,55 @@ export async function POST(request: NextRequest) {
       threshold,
     })
 
-    // Step 2: Upload encrypted data to Walrus (optional - can continue without it)
-    let walrusResult: { blobId: string; storage?: { endEpoch: string }; id?: string; event?: { txDigest: string } } | null = null
-    let walrusError: string | null = null
+    // Step 2: Upload encrypted data to Walrus using SDK
+    // This requires a signer with sufficient SUI (for gas) and WAL (for storage)
+    if (!signer) {
+      return NextResponse.json(
+        {
+          error: "Server-side Walrus upload requires SUI_SERVER_PRIVATE_KEY to be configured. " +
+                 "The signer needs SUI for gas fees and WAL tokens for storage costs.",
+        },
+        { status: 500 }
+      )
+    }
+
+    let walrusResult: { blobId: string; blobObject: any } | null = null
     
     try {
       walrusResult = await uploadToWalrus({
         encryptedData: encryptedObject,
         epochs: 1, // Store for 1 epoch (can be configured)
+        network,
+        signer, // Required for SDK
+        deletable: true,
       })
       console.log("Successfully uploaded to Walrus:", walrusResult.blobId)
     } catch (error) {
-      walrusError = error instanceof Error ? error.message : String(error)
-      console.warn("Walrus upload failed, continuing without it:", walrusError)
-      // Continue without Walrus - we'll use a placeholder or skip on-chain registration
-    }
-
-    // Step 3: Register on Sui contract (only if Walrus upload succeeded)
-    let registrationResult: { txDigest?: string; resourceId?: string; transactionBytes?: number[] } = {}
-    
-    if (!walrusResult) {
-      // If Walrus upload failed, we can't register on-chain (registry requires walrusCid)
-      // Return success with encryption but note that on-chain registration is skipped
+      const errorMessage = error instanceof Error ? error.message : String(error)
+      const errorStack = error instanceof Error ? error.stack : undefined
+      console.error("Walrus upload failed:", errorMessage)
+      console.error("Error stack:", errorStack)
+      console.error("Signer address:", signer?.toSuiAddress())
+      
+      // Return detailed error - Walrus is required
       return NextResponse.json(
         {
-          success: true,
+          error: "Walrus upload failed",
+          message: errorMessage,
+          stack: errorStack,
+          signerAddress: signer?.toSuiAddress(),
+          details: "The encrypted content could not be stored on Walrus. " +
+                   "Please ensure the signer has sufficient SUI (for gas) and WAL tokens (for storage). " +
+                   "Check the 'message' field above for the specific error.",
           encrypted: true,
-          walrusUploaded: false,
-          walrusError: walrusError || "Unknown error",
-          message: "Content encrypted successfully, but Walrus upload failed. On-chain registration skipped.",
           sealPolicy: policyId,
-          warning: "All Walrus services appear to be unavailable. Please try again later or use a local Walrus publisher.",
         },
-        { status: 200 }
+        { status: 500 }
       )
     }
+
+    // Step 3: Register on Sui contract
+    let registrationResult: { txDigest?: string; resourceId?: string; transactionBytes?: number[] } = {}
     
     try {
       if (signer && receiver) {
@@ -209,6 +243,7 @@ export async function POST(request: NextRequest) {
       success: true,
       walrusUploaded: true,
       walrusCid: walrusResult.blobId,
+      walrusObjectId: walrusResult.blobObject.id,
       sealPolicyId: policyId,
       encrypted: true,
       domain,
@@ -216,8 +251,7 @@ export async function POST(request: NextRequest) {
       price,
       fileName: file.name,
       fileSize: file.size,
-      ...(walrusResult.storage && { endEpoch: walrusResult.storage.endEpoch }),
-      ...(walrusResult.id && { walrusObjectId: walrusResult.id }),
+      endEpoch: walrusResult.blobObject.storage.end_epoch,
       // On-chain registration results
       ...(registrationResult.txDigest && { suiTxDigest: registrationResult.txDigest }),
       ...(registrationResult.resourceId && { suiResourceId: registrationResult.resourceId }),

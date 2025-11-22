@@ -102,7 +102,11 @@ export default function RegistryPage() {
 
       if (!response.ok) {
         const errorData = await response.json()
-        throw new Error(errorData.error || "Failed to register content")
+        // Show detailed error message if available
+        const errorMessage = errorData.message || errorData.error || "Failed to register content"
+        const errorDetails = errorData.details ? `\n\nDetails: ${errorData.details}` : ""
+        const signerInfo = errorData.signerAddress ? `\n\nSigner: ${errorData.signerAddress}` : ""
+        throw new Error(`${errorMessage}${errorDetails}${signerInfo}`)
       }
 
       const data = await response.json()
@@ -275,9 +279,12 @@ export default function RegistryPage() {
 
               {/* Error Message */}
               {error && (
-                <div className="flex items-center gap-2 p-4 rounded-md bg-destructive/10 text-destructive border border-destructive/20">
-                  <AlertCircle className="h-5 w-5" />
-                  <p className="text-sm">{error}</p>
+                <div className="flex items-start gap-2 p-4 rounded-md bg-destructive/10 text-destructive border border-destructive/20">
+                  <AlertCircle className="h-5 w-5 mt-0.5 flex-shrink-0" />
+                  <div className="flex-1">
+                    <p className="text-sm font-semibold mb-1">Error:</p>
+                    <pre className="text-xs whitespace-pre-wrap break-words">{error}</pre>
+                  </div>
                 </div>
               )}
 

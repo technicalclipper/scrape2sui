@@ -8,6 +8,9 @@ const nextConfig: NextConfig = {
       bodySizeLimit: '10mb',
     },
   },
+  // Configure for Walrus SDK WASM module
+  // As per @mysten/walrus docs: https://sdk.mystenlabs.com/walrus
+  serverExternalPackages: ['@mysten/walrus', '@mysten/walrus-wasm'],
 };
 
 export default nextConfig;

@@ -1,232 +1,162 @@
-// Walrus storage integration
-// Based on official Walrus documentation: https://docs.wal.app/usage/web-api.html
-// Uses direct publisher endpoints with PUT /v1/blobs?epochs={epochs}
-
-export interface WalrusService {
-  id: string
-  name: string
-  publisherUrl: string
-  aggregatorUrl: string
-}
-
-// Official Walrus testnet publisher (from docs.wal.app)
-// According to https://docs.wal.app/usage/web-api.html#using-a-public-aggregator-or-publisher
-// The main public testnet publisher is: https://publisher.walrus-testnet.walrus.space
-// Individual publisher services may also be available but can be unreliable
-export const DEFAULT_WALRUS_SERVICES: WalrusService[] = [
-  {
-    id: "official-testnet",
-    name: "Official Testnet Publisher",
-    publisherUrl: "https://publisher.walrus-testnet.walrus.space",
-    aggregatorUrl: "https://aggregator.walrus-testnet.walrus.space",
-  },
-  // Fallback to individual services if main publisher is unavailable
-  {
-    id: "service1",
-    name: "walrus.space",
-    publisherUrl: "https://walrus.space/publisher1",
-    aggregatorUrl: "https://walrus.space/aggregator1",
-  },
-  {
-    id: "service2",
-    name: "staketab.org",
-    publisherUrl: "https://staketab.org/publisher2",
-    aggregatorUrl: "https://staketab.org/aggregator2",
-  },
-  {
-    id: "service3",
-    name: "redundex.com",
-    publisherUrl: "https://redundex.com/publisher3",
-    aggregatorUrl: "https://redundex.com/aggregator3",
-  },
-  {
-    id: "service4",
-    name: "nodes.guru",
-    publisherUrl: "https://nodes.guru/publisher4",
-    aggregatorUrl: "https://nodes.guru/aggregator4",
-  },
-  {
-    id: "service5",
-    name: "banansen.dev",
-    publisherUrl: "https://banansen.dev/publisher5",
-    aggregatorUrl: "https://banansen.dev/aggregator5",
-  },
-  {
-    id: "service6",
-    name: "everstake.one",
-    publisherUrl: "https://everstake.one/publisher6",
-    aggregatorUrl: "https://everstake.one/aggregator6",
-  },
-]
+// Walrus storage integration using @mysten/walrus SDK
+import { SuiClient, getFullnodeUrl } from "@mysten/sui/client"
+import { walrus } from "@mysten/walrus"
+import type { Signer } from "@mysten/sui/cryptography"
+import { Ed25519Keypair } from "@mysten/sui/keypairs/ed25519"
+import { fromHex } from "@mysten/sui/utils"
 
 export interface WalrusUploadOptions {
   encryptedData: Uint8Array
   epochs?: number
-  service?: WalrusService // Optional: override default service
+  network?: "testnet" | "mainnet" | "devnet"
+  signer: Signer // Required - must provide a signer for SDK
+  deletable?: boolean // Whether blob can be deleted (default: true)
 }
 
 export interface WalrusUploadResult {
   blobId: string
-  storage: {
-    endEpoch: string
-  }
-  id?: string // Sui object ID if newly created
-  event?: {
-    txDigest: string
-  }
-}
-
-export interface WalrusResponse {
-  alreadyCertified?: {
-    blobId: string
-    endEpoch: string
-    event: {
-      txDigest: string
-    }
-  }
-  newlyCreated?: {
-    blobObject: {
-      blobId: string
+  blobObject: {
+    id: string
+    registered_epoch: number
+    blob_id: string
+    size: string
+    storage: {
       id: string
-      storage: {
-        endEpoch: string
-      }
+      start_epoch: number
+      end_epoch: number
+      storage_size: string
     }
   }
 }
 
 /**
- * Get the publisher URL for Walrus blob upload
- * The publisher endpoint is: {publisherUrl}/v1/blobs?epochs={epochs}
+ * Upload encrypted data to Walrus using the official TypeScript SDK
+ * This is the recommended approach as it handles all the complexity
+ * of encoding, registering, uploading, and certifying blobs.
  */
-function getPublisherUrl(path: string, service: WalrusService): string {
-  const cleanPath = path.replace(/^\/+/, "").replace(/^v1\//, "")
-  const baseUrl = service.publisherUrl.endsWith("/")
-    ? service.publisherUrl.slice(0, -1)
-    : service.publisherUrl
-  return `${baseUrl}/v1/${cleanPath}`
-}
-
-/**
- * Upload to a single Walrus service with timeout
- */
-async function uploadToSingleService(
-  service: WalrusService,
-  encryptedData: Uint8Array,
-  epochs: number,
-  timeoutMs: number = 10000
-): Promise<WalrusUploadResult> {
-  const publisherUrl = getPublisherUrl(`/v1/blobs?epochs=${epochs}`, service)
-  
-  console.log(`Uploading to Walrus: ${publisherUrl}`)
-  
-  // Create AbortController for timeout
-  const controller = new AbortController()
-  const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
-
-  try {
-    // Convert Uint8Array to a format fetch accepts
-    // Create a new Uint8Array to ensure it's a standard ArrayBufferView
-    const dataArray = new Uint8Array(encryptedData)
-    const blob = new Blob([dataArray], { type: "application/octet-stream" })
-    
-    const response = await fetch(publisherUrl, {
-      method: "PUT",
-      body: blob,
-      headers: {
-        "Content-Type": "application/octet-stream",
-      },
-      signal: controller.signal,
-    })
-
-    clearTimeout(timeoutId)
-
-    if (!response.ok) {
-      // Try to get error text, but limit it to avoid huge HTML responses
-      let errorText = response.statusText
-      try {
-        const text = await response.text()
-        // If it's HTML (like Cloudflare error pages), just use status
-        if (!text.startsWith("<!DOCTYPE") && text.length < 500) {
-          errorText = text
-        }
-      } catch {
-        // Ignore parsing errors
-      }
-      
-      throw new Error(
-        `Walrus upload failed: ${response.status} ${errorText}`
-      )
-    }
-
-    const result: WalrusResponse = await response.json()
-
-    if (result.alreadyCertified) {
-      return {
-        blobId: result.alreadyCertified.blobId,
-        storage: {
-          endEpoch: result.alreadyCertified.endEpoch,
-        },
-        event: {
-          txDigest: result.alreadyCertified.event.txDigest,
-        },
-      }
-    } else if (result.newlyCreated) {
-      return {
-        blobId: result.newlyCreated.blobObject.blobId,
-        storage: {
-          endEpoch: result.newlyCreated.blobObject.storage.endEpoch,
-        },
-        id: result.newlyCreated.blobObject.id,
-      }
-    } else {
-      throw new Error("Unexpected Walrus response format")
-    }
-  } catch (error) {
-    clearTimeout(timeoutId)
-    
-    if (error instanceof Error && error.name === "AbortError") {
-      throw new Error(`Request timeout after ${timeoutMs}ms`)
-    }
-    throw error
-  }
-}
-
 export async function uploadToWalrus(
   options: WalrusUploadOptions
 ): Promise<WalrusUploadResult> {
-  const { encryptedData, epochs = 1, service = DEFAULT_WALRUS_SERVICES[0] } = options
+  const {
+    encryptedData,
+    epochs = 1,
+    network = "testnet",
+    signer,
+    deletable = true,
+  } = options
 
-  // If a specific service is provided, only try that one
-  if (service.id !== DEFAULT_WALRUS_SERVICES[0].id) {
-    return uploadToSingleService(service, encryptedData, epochs)
+  if (!signer) {
+    throw new Error("Signer is required for Walrus upload. Provide a keypair with sufficient SUI and WAL tokens.")
   }
 
-  // Try all services in parallel for faster failure detection
-  const servicesToTry = DEFAULT_WALRUS_SERVICES
-  const errors: Error[] = []
+  try {
+    // Create Sui client extended with Walrus SDK
+    const suiClient = new SuiClient({
+      url: getFullnodeUrl(network),
+      network,
+    })
 
-  for (const walrusService of servicesToTry) {
+    // Check signer balance before attempting upload
+    const signerAddress = signer.toSuiAddress()
+    console.log(`Checking balance for signer: ${signerAddress}`)
+    
     try {
-      console.log(`Trying ${walrusService.name}...`)
-      return await uploadToSingleService(walrusService, encryptedData, epochs, 8000) // 8 second timeout per service
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error)
-      console.warn(`${walrusService.name} failed: ${errorMessage}`)
-      errors.push(error instanceof Error ? error : new Error(String(error)))
-      // Continue to next service
+      const coins = await suiClient.getCoins({
+        owner: signerAddress,
+        coinType: "0x2::sui::SUI",
+      })
+      const totalBalance = coins.data.reduce((sum, coin) => sum + BigInt(coin.balance), BigInt(0))
+      console.log(`Signer SUI balance: ${totalBalance.toString()} MIST (${Number(totalBalance) / 1_000_000_000} SUI)`)
+      
+      if (totalBalance < BigInt(10_000_000)) { // Less than 0.01 SUI
+        console.warn("Warning: Signer has very low SUI balance. Upload may fail due to insufficient gas.")
+      }
+    } catch (balanceError) {
+      console.warn("Could not check signer balance:", balanceError)
     }
+
+    // Extend client with Walrus SDK
+    const walrusClient = suiClient.$extend(
+      walrus({
+        // Use upload relay for better performance (optional but recommended)
+        uploadRelay: {
+          host: `https://upload-relay.${network}.walrus.space`,
+          sendTip: {
+            max: 1_000_000, // Max 1 SUI tip (in MIST)
+          },
+        },
+      })
+    )
+
+    console.log(`Uploading ${encryptedData.length} bytes to Walrus (${network})...`)
+    console.log(`Using upload relay: https://upload-relay.${network}.walrus.space`)
+
+    // Use the SDK's writeBlob method which handles:
+    // 1. Encoding the blob
+    // 2. Registering on-chain
+    // 3. Uploading to storage nodes (or upload relay)
+    // 4. Certifying the blob
+    const result = await walrusClient.walrus.writeBlob({
+      blob: encryptedData,
+      epochs,
+      deletable,
+      signer,
+    })
+
+    console.log(`Successfully uploaded to Walrus. Blob ID: ${result.blobId}`)
+
+    return {
+      blobId: result.blobId,
+      blobObject: {
+        id: result.blobObject.id.id,
+        registered_epoch: result.blobObject.registered_epoch,
+        blob_id: result.blobObject.blob_id,
+        size: result.blobObject.size,
+        storage: {
+          id: result.blobObject.storage.id.id,
+          start_epoch: result.blobObject.storage.start_epoch,
+          end_epoch: result.blobObject.storage.end_epoch,
+          storage_size: result.blobObject.storage.storage_size,
+        },
+      },
+    }
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error)
+    const errorStack = error instanceof Error ? error.stack : undefined
+    const errorCause = error instanceof Error && error.cause ? String(error.cause) : undefined
+    
+    console.error("Walrus SDK upload failed:")
+    console.error("  Message:", errorMessage)
+    console.error("  Stack:", errorStack)
+    console.error("  Cause:", errorCause)
+    console.error("  Full error:", error)
+    
+    // Check for specific error patterns
+    if (errorMessage.includes("insufficient") || errorMessage.includes("balance") || errorMessage.includes("InsufficientGas")) {
+      throw new Error(
+        `Insufficient funds: The signer needs SUI for gas and WAL tokens for storage. ` +
+        `Signer address: ${signer.toSuiAddress()}. ` +
+        `Error: ${errorMessage}`
+      )
+    }
+    
+    if (errorMessage.includes("timeout") || errorMessage.includes("network") || errorMessage.includes("ECONNREFUSED") || errorMessage.includes("fetch failed")) {
+      throw new Error(
+        `Network error: Unable to connect to Walrus services. ` +
+        `Please check your network connection and try again. ` +
+        `Error: ${errorMessage}`
+      )
+    }
+    
+    if (errorMessage.includes("WAL") || errorMessage.includes("wal")) {
+      throw new Error(
+        `WAL token issue: ${errorMessage}. ` +
+        `The signer needs WAL tokens for storage costs. ` +
+        `Signer address: ${signer.toSuiAddress()}`
+      )
+    }
+
+    // Return the full error message for debugging
+    throw new Error(`Walrus upload failed: ${errorMessage}${errorCause ? ` (Cause: ${errorCause})` : ""}`)
   }
-
-  // All services failed
-  const errorSummary = errors
-    .map((e, i) => `${servicesToTry[i].name}: ${e.message}`)
-    .join("; ")
-  
-  throw new Error(
-    `Failed to upload to Walrus after trying all ${servicesToTry.length} services. ` +
-    `All services appear to be unavailable (connection timeouts). ` +
-    `Please try again later. Errors: ${errorSummary}`
-  )
 }
-
