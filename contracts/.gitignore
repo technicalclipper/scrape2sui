@@ -1,0 +1,20 @@
+# Sui Move build artifacts
+build/
+*.mv
+*.abi
+*.bytecode
+
+# Sui Move lock files (uncomment if you want to ignore dependency locks)
+# Move.lock
+
+# IDE/Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+

@@ -1,0 +1,13 @@
+[package]
+name = "ai-paywall"
+version = "1.0.0"
+edition = "2024"
+
+[addresses]
+ai_paywall = "0x0"
+
+[dependencies]
+Sui = { git = "https://github.com/MystenLabs/sui.git", subdir = "crates/sui-framework/packages/sui-framework", rev = "framework/mainnet" }
+
+[dev-addresses]
+ai_paywall = "0x0"
