@@ -1,28 +1,24 @@
 // Example: How a bot would use the PaywallClient SDK
-// This shows how coin splitting happens automatically
+// ALL CONTRACT INTERACTIONS ARE ABSTRACTED - Just provide private key!
 
 const { PaywallClient } = require('../dist/index');
 
-// Bot initializes with private key
+// Bot initializes with ONLY private key - that's it!
 const bot = new PaywallClient({
-  privateKey: process.env.PRIVATE_KEY, // Base64 or hex private key
-  // rpcUrl: 'https://fullnode.testnet.sui.io:443' // Optional
+  privateKey: process.env.PRIVATE_KEY || 'your-private-key-here', // Base64 or hex private key
+  // rpcUrl: 'https://fullnode.testnet.sui.io:443' // Optional - defaults to testnet
 });
 
 async function main() {
   try {
-    // Complete flow: Automatically handles everything
-    const result = await bot.payForAccess('http://localhost:3000/premium');
+    // 🎯 ONE-LINE ACCESS - Everything is automatic!
+    // - Detects 402 payment required
+    // - Automatically purchases AccessPass (handles coin splitting)
+    // - Signs headers
+    // - Makes request with headers
+    // - Returns content
+    const content = await bot.access('http://localhost:3000/premium');
     
-    console.log('✅ AccessPass purchased:', result.accessPassId);
-    console.log('Headers:', result.headers);
-    
-    // Use headers to access protected content
-    const response = await fetch('http://localhost:3000/premium', {
-      headers: result.headers,
-    });
-    
-    const content = await response.json();
     console.log('✅ Premium content:', content);
     
   } catch (error) {
@@ -30,18 +26,26 @@ async function main() {
   }
 }
 
-// What happens under the hood:
-// 1. Bot calls payForAccess(url)
-// 2. Fetches 402 response → gets price, domain, resource, nonce
-// 3. Calls purchaseAccessPass() which:
-//    - Gets all coins: bot.getCoins()
-//    - Selects best coin: bot.selectCoinForPayment()
-//    - Splits if needed: bot.splitCoin() ← AUTOMATIC!
-//    - Purchases AccessPass
-// 4. Signs headers for authentication
-// 5. Returns headers ready to use
+// Alternative: Use .get() method (same as .access())
+async function alternativeExample() {
+  const content = await bot.get('http://localhost:3000/premium');
+  console.log('Content:', content);
+}
 
-// Manual example (if you want more control):
+// What happens under the hood (ALL AUTOMATIC):
+// 1. Bot calls bot.access(url)
+// 2. Makes request → Gets 402 Payment Required
+// 3. Extracts challenge (price, domain, resource, nonce, receiver)
+// 4. Calls purchaseAccessPass() which:
+//    - Gets all coins: getCoins()
+//    - Selects best coin: selectCoinForPayment()
+//    - Splits if needed: splitCoin() ← AUTOMATIC!
+//    - Purchases AccessPass on-chain
+// 5. Signs headers with AccessPass
+// 6. Retries request with signed headers
+// 7. Returns content
+
+// Advanced: Manual control (if you need more control):
 async function manualExample() {
   // Step 1: Check available coins
   const coins = await bot.getCoins();
@@ -64,6 +68,7 @@ async function manualExample() {
     remaining: 10,
     expiry: 0,
     nonce: '1234567890-abc123',
+    receiver: '0x...', // Receiver address from 402 challenge
   });
   
   console.log('AccessPass ID:', accessPassId);

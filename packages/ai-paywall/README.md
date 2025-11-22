@@ -12,6 +12,8 @@ npm install ai-paywall
 
 ### Website Owner (Express Middleware)
 
+**Super Simple - Just 3 parameters!** Contract details are baked into the package.
+
 ```javascript
 const express = require('express');
 const { paywall } = require('ai-paywall');
@@ -19,36 +21,52 @@ const { paywall } = require('ai-paywall');
 const app = express();
 
 // Protect a route - JUST THIS!
-app.use('/hidden', paywall({
-  price: '0.1',                    // Price in SUI
+app.use('/premium', paywall({
+  price: '0.01',                    // Price in SUI
+  receiver: '0x...',                // Your wallet address (where payments go)
   domain: 'www.example.com',       // Your domain
-  packageId: '0x...',              // Sui package ID (contract address)
-  treasuryId: '0x...',             // Treasury shared object ID
-  passCounterId: '0x...',          // PassCounter shared object ID
-  mockContent: '{"message": "Mock content"}' // Optional: for testing
 }));
 
 // Your protected route
-app.get('/hidden', (req, res) => {
+app.get('/premium', (req, res) => {
   // Access granted - user has valid pass
   res.json({ content: 'Premium content here' });
 });
 ```
 
-### Example with Deployed Contract
+**That's it!** All contract details (packageId, treasuryId, passCounterId) are automatically loaded from the package config.
+
+### AI Bot / Client (Client SDK)
+
+**Even Simpler - Just private key!** All contract interactions are abstracted.
 
 ```javascript
-const { paywall } = require('ai-paywall');
-const contractConfig = require('./contract-config.json'); // Your deployment config
+const { PaywallClient } = require('ai-paywall');
 
-app.use('/premium', paywall({
-  price: '0.1',
-  domain: 'www.example.com',
-  packageId: contractConfig.packageId,
-  treasuryId: contractConfig.treasuryId,
-  passCounterId: contractConfig.passCounterId,
-}));
+// 1. Initialize with private key
+const bot = new PaywallClient({
+  privateKey: process.env.PRIVATE_KEY, // Base64 or hex private key
+});
+
+// 2. Access protected route - ONE LINE!
+const content = await bot.access('http://example.com/premium');
+
+console.log(content); // Premium content!
 ```
+
+**What happens automatically:**
+- ✅ Detects 402 payment required
+- ✅ Purchases AccessPass (handles coin splitting automatically)
+- ✅ Signs headers
+- ✅ Makes authenticated request
+- ✅ Returns content
+
+**That's it!** No need to:
+- ❌ Manually handle 402 responses
+- ❌ Split coins
+- ❌ Call contract functions
+- ❌ Sign headers
+- ❌ Manage AccessPass lifecycle
 
 ## How It Works
 
@@ -78,9 +96,10 @@ Clients must include these headers when accessing protected routes:
 ## Examples
 
 See the [examples](./example/) directory for:
-- Example Express server (`example/server.js`)
-- Test script (`example/test-middleware.js`)
-- Detailed testing instructions (`example/README.md`)
+- **Simple bot example** (`example/simple-bot-example.js`) - Just 4 lines!
+- **Full bot example** (`example/bot-example.js`) - With advanced usage
+- **Example server** (`example/server.js`) - Express server setup
+- **Complete test** (`example/test-complete-flow.js`) - End-to-end test
 
 ### Quick Example
 
@@ -128,16 +147,23 @@ Clients must include these headers when accessing protected routes:
 
 ## Configuration Options
 
+### Middleware Options
+
 ```typescript
 interface PaywallOptions {
-  price: string;           // Price in SUI (e.g., "0.1")
+  price: string;           // Price in SUI (e.g., "0.01")
+  receiver: string;        // Your wallet address (where payments go)
   domain: string;          // Domain name (e.g., "www.example.com")
-  packageId: string;       // Sui package ID (contract address)
-  treasuryId: string;      // Treasury shared object ID
-  passCounterId: string;   // PassCounter shared object ID
-  receiver?: string;       // Optional: receiver address
+  // Contract details (packageId, treasuryId, passCounterId) are auto-loaded!
+}
+```
+
+### Client Options
+
+```typescript
+interface PaywallClientOptions {
+  privateKey: string;      // Base64 or hex private key
   rpcUrl?: string;         // Optional: Sui RPC URL (default: testnet)
-  mockContent?: string;    // Optional: mock content for testing
 }
 ```
 

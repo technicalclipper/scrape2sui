@@ -192,6 +192,17 @@ export function isAccessPassValid(pass: AccessPass): boolean {
 }
 
 /**
+ * Normalize resource path (remove trailing slash for consistency)
+ */
+function normalizeResourcePath(path: string): string {
+  // Remove trailing slash, but keep root path as '/'
+  if (path === '/' || path === '') {
+    return '/';
+  }
+  return path.endsWith('/') ? path.slice(0, -1) : path;
+}
+
+/**
  * Verify AccessPass matches domain and resource
  */
 export function matchesAccessPass(
@@ -199,5 +210,23 @@ export function matchesAccessPass(
   domain: string,
   resource: string
 ): boolean {
-  return pass.domain === domain && pass.resource === resource;
+  // Normalize both paths to handle trailing slash differences
+  const normalizedPassResource = normalizeResourcePath(pass.resource);
+  const normalizedRequestResource = normalizeResourcePath(resource);
+  
+  const domainMatch = pass.domain === domain;
+  const resourceMatch = normalizedPassResource === normalizedRequestResource;
+  
+  console.log(`[Sui] Resource match check:`, {
+    passDomain: pass.domain,
+    requestDomain: domain,
+    domainMatch,
+    passResource: pass.resource,
+    normalizedPassResource,
+    requestResource: resource,
+    normalizedRequestResource,
+    resourceMatch,
+  });
+  
+  return domainMatch && resourceMatch;
 }
