@@ -3,5 +3,6 @@
   "moduleName": "paywall",
   "treasuryId": "0xfea51bb3a5d526dee6f3098011dd2eb54353a07b5fb8f3f826b790e320ac2aae",
   "passCounterId": "0x2191fd232443aff667c06d8bf3697544ce907a34a99bf5490ea07d42221e51a5",
-  "network": "testnet"
+  "network": "testnet",
+  "rpcUrl": "https://fullnode.testnet.sui.io:443"
 }

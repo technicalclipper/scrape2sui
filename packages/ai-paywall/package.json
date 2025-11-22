@@ -5,8 +5,12 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "build": "tsc",
-    "prepublishOnly": "npm run build"
+    "build": "node node_modules/typescript/lib/tsc.js",
+    "prepublishOnly": "npm run build",
+    "example": "npm run build && node example/server.js",
+    "dev": "npm run build && node example/server.js",
+    "start": "node example/server.js",
+    "test": "node example/test-complete-flow.js"
   },
   "keywords": [
     "paywall",
@@ -24,8 +28,9 @@
     "@mysten/sui.js": "^0.50.0"
   },
   "devDependencies": {
-    "@types/node": "^20.0.0",
     "@types/express": "^4.17.21",
+    "@types/node": "^20.0.0",
+    "express": "^5.1.0",
     "typescript": "^5.9.3"
   },
   "peerDependencies": {
@@ -37,4 +42,3 @@
     }
   }
 }
-
