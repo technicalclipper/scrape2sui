@@ -388,11 +388,13 @@ async function verifyAccess(
   // Fetch and decrypt content from Walrus
   try {
     console.log(`[Paywall] Fetching resource entry from registry...`);
-    // Try to get ResourceEntry ID from environment or use known registered content
-    // For DOMAIN /hidden/dog, we have the ResourceEntry ID from constants.txt
+    // Try to get ResourceEntry ID from environment variable
+    // If domain and resource match the configured values, use the resource entry ID from env
+    const configuredDomain = process.env.WALRUS_DOMAIN || "www.demo1.com";
+    const configuredResource = process.env.WALRUS_RESOURCE || "/hidden/dog";
     const knownResourceEntryId =
-      options.domain === "www.new3krish.com" && resource === "/hidden/dog"
-        ? "0x5c6f02b39b6e02de098a68c0d72fc7a812365403f2e27e5ede2e49ff8ab34333"
+      options.domain === configuredDomain && resource === configuredResource
+        ? (process.env.RESOURCE_ENTRY_ID || "0x44ace4be0c2ca4bf48bdb4f6a8069ff2beb73c3b33409035cffefa160ff40f5d")
         : undefined;
 
     const resourceEntry = await fetchResourceEntry(

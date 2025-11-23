@@ -4,13 +4,11 @@
 const express = require("express");
 const { paywall } = require("../dist/index"); // Use built dist, or '../src/index' if using ts-node
 const REGISTERED_CONTENT = {
-  domain: "www.new3krish.com",
-  resource: "/hidden/dog",
-  walrusBlobId: "CJdVQYMwrqww9u7413CuQTDvOLaeZlurHfwkeDXSx4I",
-  sealPolicyId:
-    "c16ea2047827a5f2fca199bdacf13934539d053f4bd3a922e3c93175ba17759d8067f0ee3f",
-  resourceEntryId:
-    "0x5c6f02b39b6e02de098a68c0d72fc7a812365403f2e27e5ede2e49ff8ab34333",
+  domain: process.env.WALRUS_DOMAIN || "www.demo1.com",
+  resource: process.env.WALRUS_RESOURCE || "/hidden/dog",
+  walrusBlobId: process.env.WALRUS_BLOB_ID || "wqwm17mRGo5PkXPo5p_I-RXtNIH4kdM-UnPVksBQ5lY",
+  sealPolicyId: process.env.SEAL_POLICY_ID || "f02db2d9f0844665d33376e822e6c2e0c150344572fb7b8f4d4b6323621b5895cbe9653375",
+  resourceEntryId: process.env.RESOURCE_ENTRY_ID || "0x44ace4be0c2ca4bf48bdb4f6a8069ff2beb73c3b33409035cffefa160ff40f5d",
 };
 
 const app = express();

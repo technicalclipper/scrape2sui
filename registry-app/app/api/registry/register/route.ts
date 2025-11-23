@@ -148,18 +148,8 @@ export async function POST(request: NextRequest) {
       threshold,
     })
 
-    // Step 2: Upload encrypted data to Walrus using SDK
-    // This requires a signer with sufficient SUI (for gas) and WAL (for storage)
-    if (!signer) {
-      return NextResponse.json(
-        {
-          error: "Server-side Walrus upload requires SUI_SERVER_PRIVATE_KEY to be configured. " +
-                 "The signer needs SUI for gas fees and WAL tokens for storage costs.",
-        },
-        { status: 500 }
-      )
-    }
-
+    // Step 2: Upload encrypted data to Walrus using HTTP PUT (same as seal/examples)
+    // No signer needed - just upload via HTTP
     let walrusResult: { blobId: string; blobObject: any } | null = null
     
     try {
@@ -167,8 +157,6 @@ export async function POST(request: NextRequest) {
         encryptedData: encryptedObject,
         epochs: 1, // Store for 1 epoch (can be configured)
         network,
-        signer, // Required for SDK
-        deletable: true,
       })
       console.log("Successfully uploaded to Walrus:", walrusResult.blobId)
     } catch (error) {
@@ -176,7 +164,6 @@ export async function POST(request: NextRequest) {
       const errorStack = error instanceof Error ? error.stack : undefined
       console.error("Walrus upload failed:", errorMessage)
       console.error("Error stack:", errorStack)
-      console.error("Signer address:", signer?.toSuiAddress())
       
       // Return detailed error - Walrus is required
       return NextResponse.json(
@@ -184,10 +171,9 @@ export async function POST(request: NextRequest) {
           error: "Walrus upload failed",
           message: errorMessage,
           stack: errorStack,
-          signerAddress: signer?.toSuiAddress(),
           details: "The encrypted content could not be stored on Walrus. " +
-                   "Please ensure the signer has sufficient SUI (for gas) and WAL tokens (for storage). " +
-                   "Check the 'message' field above for the specific error.",
+                   "This may be a network issue or the Walrus service may be unavailable. " +
+                   "Please try again later.",
           encrypted: true,
           sealPolicy: policyId,
         },

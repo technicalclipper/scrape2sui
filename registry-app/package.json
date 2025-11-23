@@ -9,8 +9,9 @@
     "lint": "eslint"
   },
   "dependencies": {
-    "@mysten/seal": "^0.9.4",
-    "@mysten/sui": "^1.45.0",
+    "@mysten/seal": "0.5.2",
+    "@mysten/sui": "1.37.6",
+    "@mysten/dapp-kit": "^0.17.7",
     "@mysten/walrus": "^0.8.4",
     "@radix-ui/react-dialog": "^1.1.15",
     "@radix-ui/react-label": "^2.1.8",

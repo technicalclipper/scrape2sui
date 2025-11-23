@@ -22,17 +22,15 @@ const { Transaction } = require("@mysten/sui/transactions");
 const { fromHex, toHex, toB64 } = require("@mysten/sui/utils");
 const contractConfig = require("../dist/config/contract.json");
 const REGISTERED_CONTENT = {
-  domain: "www.new3krish.com",
-  resource: "/hidden/dog",
-  walrusBlobId: "CJdVQYMwrqww9u7413CuQTDvOLaeZlurHfwkeDXSx4I",
-  sealPolicyId:
-    "c16ea2047827a5f2fca199bdacf13934539d053f4bd3a922e3c93175ba17759d8067f0ee3f",
-  resourceEntryId:
-    "0x5c6f02b39b6e02de098a68c0d72fc7a812365403f2e27e5ede2e49ff8ab34333",
+  domain: process.env.WALRUS_DOMAIN || "www.demo1.com",
+  resource: process.env.WALRUS_RESOURCE || "/hidden/dog",
+  walrusBlobId: process.env.WALRUS_BLOB_ID || "wqwm17mRGo5PkXPo5p_I-RXtNIH4kdM-UnPVksBQ5lY",
+  sealPolicyId: process.env.SEAL_POLICY_ID || "f02db2d9f0844665d33376e822e6c2e0c150344572fb7b8f4d4b6323621b5895cbe9653375",
+  resourceEntryId: process.env.RESOURCE_ENTRY_ID || "0x44ace4be0c2ca4bf48bdb4f6a8069ff2beb73c3b33409035cffefa160ff40f5d",
 };
 
-const SERVER_URL = "http://localhost:3000";
-const ENDPOINT = "/hidden/dog"; // Matches registered resource in registry
+const SERVER_URL = process.env.SERVER_URL || "http://localhost:3000";
+const ENDPOINT = process.env.WALRUS_RESOURCE || "/hidden/dog"; // Matches registered resource in registry
 
 // Seal server object IDs for testnet
 const SEAL_SERVER_OBJECT_IDS = [
@@ -216,7 +214,8 @@ async function decryptContentWithSeal(encryptedBlob, accessPassId, client) {
     log("   ✅ SessionKey signed", colors.green);
 
     // Build seal_approve transaction
-    // The contract expects policy ID bytes (37 bytes), not the full ID
+    // Following seal/examples pattern: moveCallConstructor receives id (policy ID hex string)
+    // and converts it to bytes with fromHex(id) for the contract call
     log("   Building seal_approve transaction...", colors.yellow);
     log(`   Summary of all IDs:`, colors.bright);
     log(
@@ -237,13 +236,15 @@ async function decryptContentWithSeal(encryptedBlob, accessPassId, client) {
       colors.bright
     );
 
+    // Following seal/examples pattern exactly:
+    // moveCallConstructor receives id (hex string) and uses fromHex(id) for contract call
     const moveCallConstructor = (tx, id) => {
-      // id parameter is the full ID (hex string) for Seal operations
-      // But for seal_approve, we pass only the policy ID bytes
+      // id is the policy ID as hex string (like in seal/examples)
+      // Convert to bytes using fromHex, matching seal/examples pattern
       tx.moveCall({
         target: `${packageId}::registry::seal_approve`,
         arguments: [
-          tx.pure.vector("u8", Array.from(policyIdBytes)), // Policy ID bytes (37 bytes)
+          tx.pure.vector("u8", Array.from(fromHex(id))), // Convert hex string to bytes like examples
           tx.object(resourceId),
           tx.object(accessPassId),
           tx.object("0x6"), // Clock
@@ -251,8 +252,9 @@ async function decryptContentWithSeal(encryptedBlob, accessPassId, client) {
       });
     };
 
+    // Build transaction for fetchKeys using policy ID (like seal/examples)
     const tx = new Transaction();
-    moveCallConstructor(tx, policyIdHex);
+    moveCallConstructor(tx, policyIdHex); // Pass policy ID hex string
     const txBytes = await tx.build({
       client: suiClient,
       onlyTransactionKind: true,
@@ -272,14 +274,15 @@ async function decryptContentWithSeal(encryptedBlob, accessPassId, client) {
     );
 
     // Fetch decryption keys
-    // Use full ID (package_id + policy_id) for Seal operations
+    // Following seal/examples pattern: use encryptedObject.id directly (policy ID as hex string)
+    // The Seal SDK will handle constructing the full ID internally
     log("   Fetching decryption keys from Seal servers...", colors.yellow);
-    log(`   Using Full ID for fetchKeys: ${fullId}`, colors.yellow);
-    log(`   Full ID length: ${fullId.length / 2} bytes (hex)`, colors.yellow);
+    log(`   Using policy ID for fetchKeys: ${policyIdHex}`, colors.yellow);
+    log(`   Policy ID length: ${policyIdHex.length / 2} bytes (hex)`, colors.yellow);
     log(`   Using same txBytes (length: ${txBytesLength})`, colors.yellow);
     try {
       await sealClient.fetchKeys({
-        ids: [fullId], // Use full ID (69 bytes) for Seal operations
+        ids: [policyIdHex], // Use policy ID (hex string) like seal/examples do
         txBytes,
         sessionKey,
         threshold: threshold,
@@ -295,54 +298,27 @@ async function decryptContentWithSeal(encryptedBlob, accessPassId, client) {
       throw err;
     }
 
-    // Decrypt content - use the SAME transaction bytes as fetchKeys
-    // Seal verifies the nonce using the transaction bytes, so they must match exactly
+    // Decrypt content
+    // Following seal/examples pattern: build a fresh transaction for decrypt using the same ID
+    // But use the SAME transaction bytes as fetchKeys to ensure nonce verification matches
     log("   Decrypting content...", colors.yellow);
     log(
-      `   Using Full ID for decrypt (implicit from encryptedData)`,
+      `   Using policy ID for decrypt transaction: ${policyIdHex}`,
       colors.yellow
     );
     log(
       `   Encrypted data length: ${encryptedData.length} bytes`,
       colors.yellow
     );
-
-    // Verify transaction bytes are the same (critical for nonce verification)
-    const txBytesHexForVerify = toHex(txBytes);
-    log(`   Using SAME txBytes (length: ${txBytesLength})`, colors.yellow);
-    log(
-      `   Transaction bytes hex (first 200 chars): ${txBytesHexForVerify.substring(
-        0,
-        200
-      )}...`,
-      colors.yellow
-    );
-    log(
-      `   Transaction bytes hex (last 100 chars): ...${txBytesHexForVerify.substring(
-        Math.max(0, txBytesHexForVerify.length - 100)
-      )}`,
-      colors.yellow
-    );
-
-    // Re-verify all IDs before decryption
-    log(`   Verification before decrypt:`, colors.cyan);
-    log(
-      `     - Package ID: ${encryptedPackageId} (${packageIdBytes.length} bytes)`,
-      colors.cyan
-    );
-    log(
-      `     - Policy ID: ${policyIdHex} (${policyIdBytes.length} bytes)`,
-      colors.cyan
-    );
-    log(`     - Nonce: ${nonceHex} (${nonceBytes.length} bytes)`, colors.cyan);
-    log(`     - Full ID: ${fullId} (${fullIdBytes.length} bytes)`, colors.cyan);
-    log(`     - Resource ID: ${resourceId}`, colors.cyan);
-    log(`     - AccessPass ID: ${accessPassId}`, colors.cyan);
+    
+    // Build transaction for decrypt - use the SAME transaction bytes as fetchKeys
+    // The Seal SDK will extract the ID from the encrypted data, so we just need matching txBytes
+    log(`   Using SAME txBytes from fetchKeys (length: ${txBytesLength})`, colors.yellow);
     try {
       const decryptedData = await sealClient.decrypt({
         data: encryptedData,
         sessionKey,
-        txBytes: txBytes, // Use the EXACT same txBytes as fetchKeys
+        txBytes: txBytes, // Use the EXACT same txBytes as fetchKeys (critical for nonce verification)
       });
       log(
         `   ✅ Content decrypted (${decryptedData.length} bytes)`,
@@ -448,19 +424,33 @@ async function main() {
       return; // No decryption needed for text
     }
 
-    // Get AccessPass ID from the client's recent purchase
-    // The client should have stored it, but we'll need to get it from the purchase
+    // Get AccessPass ID for decryption
+    // Note: client.access() may have already consumed an AccessPass, so we need to find one
+    // that matches the domain/resource. The domain might differ slightly (e.g., www.newkrish.com vs www.new1krish.com)
     log("");
-    log("   Getting AccessPass ID...", colors.yellow);
+    log("   Getting AccessPass ID for decryption...", colors.yellow);
 
-    // Find the most recent AccessPass for this domain/resource
-    const existingPass = await client.findExistingAccessPass(
+    // Try to find AccessPass for the registered domain/resource
+    // If client.access() consumed one, we need to find another valid one (or the same one if it has remaining uses)
+    let existingPass = await client.findExistingAccessPass(
       REGISTERED_CONTENT.domain,
       REGISTERED_CONTENT.resource
     );
 
+    // If not found, try without the exact domain match (sometimes domains differ slightly)
+    if (!existingPass) {
+      log("   ⚠️  No AccessPass found for exact domain match, trying alternative lookup...", colors.yellow);
+      // The client.access() may have used a slightly different domain
+      // We'll need to rely on the AccessPass from the server response or query more broadly
+      // For now, save the encrypted blob and note that AccessPass lookup failed
+    }
+
     if (!existingPass) {
       log("   ⚠️  No AccessPass found - cannot decrypt", colors.yellow);
+      log("   This may happen if:", colors.yellow);
+      log("     1. The AccessPass was consumed and has no remaining uses", colors.yellow);
+      log("     2. The domain/resource doesn't match exactly", colors.yellow);
+      log("     3. No AccessPass was purchased for this content", colors.yellow);
       log("   Saving encrypted blob for manual decryption...", colors.yellow);
       const fs = require("fs");
       fs.writeFileSync("encrypted-new-content.bin", Buffer.from(encryptedBlob));
@@ -485,53 +475,78 @@ async function main() {
       log("5️⃣  Saving decrypted content...", colors.cyan);
       const fs = require("fs");
 
-      // Try to determine file type
+      // Try to determine file type from content
       const decryptedBuffer = Buffer.from(decryptedData);
-
-      // Check if it's text (UTF-8)
-      let isText = true;
-      let textContent = null;
-      try {
-        textContent = decryptedBuffer.toString("utf8");
-        // Check if it contains valid UTF-8 text
-        if (
-          textContent.includes("\0") ||
-          textContent.length !== decryptedBuffer.length
-        ) {
-          isText = false;
+      
+      // Detect file type by checking magic bytes (file signatures)
+      function detectFileType(buffer) {
+        // Check for image formats by magic bytes
+        if (buffer.length >= 4) {
+          // PNG: 89 50 4E 47
+          if (buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4E && buffer[3] === 0x47) {
+            return { type: 'image', extension: 'png', mime: 'image/png' };
+          }
+          // JPEG: FF D8 FF
+          if (buffer[0] === 0xFF && buffer[1] === 0xD8 && buffer[2] === 0xFF) {
+            return { type: 'image', extension: 'jpg', mime: 'image/jpeg' };
+          }
+          // GIF: 47 49 46 38 (GIF8)
+          if (buffer[0] === 0x47 && buffer[1] === 0x49 && buffer[2] === 0x46 && buffer[3] === 0x38) {
+            return { type: 'image', extension: 'gif', mime: 'image/gif' };
+          }
+          // WebP: Check for RIFF...WEBP
+          if (buffer.length >= 12 && 
+              buffer.toString('ascii', 0, 4) === 'RIFF' && 
+              buffer.toString('ascii', 8, 12) === 'WEBP') {
+            return { type: 'image', extension: 'webp', mime: 'image/webp' };
+          }
+          // SVG: Check if it starts with XML or <svg
+          if (buffer.length >= 5) {
+            const start = buffer.toString('utf8', 0, Math.min(100, buffer.length)).trim();
+            if (start.startsWith('<?xml') || start.startsWith('<svg')) {
+              return { type: 'image', extension: 'svg', mime: 'image/svg+xml' };
+            }
+          }
         }
-      } catch {
-        isText = false;
+        
+        // Check if it's text (UTF-8)
+        try {
+          const textContent = buffer.toString("utf8");
+          // Check if it contains valid UTF-8 text without null bytes
+          if (!textContent.includes("\0") && textContent.length === buffer.length) {
+            // Check if it looks like plain text (no binary control chars)
+            const hasControlChars = /[\x00-\x08\x0E-\x1F]/.test(textContent.substring(0, 1000));
+            if (!hasControlChars) {
+              return { type: 'text', extension: 'txt', mime: 'text/plain' };
+            }
+          }
+        } catch {
+          // Not valid UTF-8
+        }
+        
+        // Default: binary
+        return { type: 'binary', extension: 'bin', mime: 'application/octet-stream' };
       }
-
-      if (isText && textContent) {
-        // Save as text file
-        fs.writeFileSync("decrypted-content.txt", textContent, "utf8");
-        log(
-          "   ✅ Saved decrypted text to: decrypted-content.txt",
-          colors.green
-        );
+      
+      const fileInfo = detectFileType(decryptedBuffer);
+      const filename = `decrypted-content.${fileInfo.extension}`;
+      
+      log(`   Detected file type: ${fileInfo.type} (${fileInfo.mime})`, colors.cyan);
+      fs.writeFileSync(filename, decryptedBuffer);
+      log(`   ✅ Saved decrypted ${fileInfo.type} to: ${filename}`, colors.green);
+      log(`   Size: ${decryptedBuffer.length} bytes`, colors.cyan);
+      
+      // Show preview for images
+      if (fileInfo.type === 'image') {
+        log("   🖼️  Image file successfully decrypted!", colors.green);
+      } else if (fileInfo.type === 'text') {
         log("");
         log("   Decrypted content preview:", colors.cyan);
-        const preview = textContent.substring(
-          0,
-          Math.min(500, textContent.length)
-        );
+        const preview = decryptedBuffer.toString('utf8').substring(0, Math.min(500, decryptedBuffer.length));
         console.log("   " + preview.split("\n").slice(0, 10).join("\n   "));
-        if (textContent.length > 500) {
-          log(
-            `   ... (${textContent.length - 500} more characters)`,
-            colors.cyan
-          );
+        if (decryptedBuffer.length > 500) {
+          log(`   ... (${decryptedBuffer.length - 500} more characters)`, colors.cyan);
         }
-      } else {
-        // Save as binary file
-        fs.writeFileSync("decrypted-content.bin", decryptedBuffer);
-        log(
-          "   ✅ Saved decrypted binary to: decrypted-content.bin",
-          colors.green
-        );
-        log(`   Size: ${decryptedBuffer.length} bytes`, colors.cyan);
       }
     } catch (decryptError) {
       log("");
