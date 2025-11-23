@@ -5,3 +5,12 @@ dist/
 .env
 *.tsbuildinfo
 
+# Generated example files
+example/*.bin
+example/*.gif
+example/*.jpg
+example/*.png
+example/*.txt
+example/decrypted-*
+example/encrypted-*
+
