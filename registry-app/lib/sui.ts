@@ -22,7 +22,7 @@ export interface RegisterResourceResult {
   resourceId?: string
 }
 
-const SUI_TO_MIST = 1_000_000_000n // 1 SUI = 10^9 MIST
+const SUI_TO_MIST = BigInt(1000000000) // 1 SUI = 10^9 MIST
 
 /**
  * Convert SUI amount to MIST (smallest unit)
@@ -67,6 +67,11 @@ export async function registerResourceOnChain(
   // Convert price to MIST
   const priceMist = suiToMist(price)
 
+  // Convert seal_policy hex string to bytes
+  // Remove 0x prefix if present and convert to bytes
+  const normalizedPolicy = sealPolicy.startsWith('0x') ? sealPolicy.slice(2) : sealPolicy;
+  const policyBytes = fromHex(normalizedPolicy);
+
   // Build transaction
   const tx = new Transaction()
 
@@ -81,7 +86,8 @@ export async function registerResourceOnChain(
       tx.pure.string(domain), // domain: String
       tx.pure.string(resource), // resource: String
       tx.pure.string(walrusCid), // walrus_cid: String
-      tx.pure.string(sealPolicy), // seal_policy: String
+      tx.pure.string(sealPolicy), // seal_policy: String (hex string for display)
+      tx.pure.vector('u8', Array.from(policyBytes)), // seal_policy_bytes: vector<u8> (hex-decoded)
       tx.pure.u64(priceMist.toString()), // price: u64
       tx.pure.address(receiver), // receiver: address
       tx.pure.u64(maxUses.toString()), // max_uses: u64
@@ -151,6 +157,11 @@ export async function buildRegisterResourceTransaction(
   // Convert price to MIST
   const priceMist = suiToMist(price)
 
+  // Convert seal_policy hex string to bytes
+  // Remove 0x prefix if present and convert to bytes
+  const normalizedPolicy = sealPolicy.startsWith('0x') ? sealPolicy.slice(2) : sealPolicy;
+  const policyBytes = fromHex(normalizedPolicy);
+
   // Build transaction
   const tx = new Transaction()
 
@@ -165,7 +176,8 @@ export async function buildRegisterResourceTransaction(
       tx.pure.string(domain), // domain: String
       tx.pure.string(resource), // resource: String
       tx.pure.string(walrusCid), // walrus_cid: String
-      tx.pure.string(sealPolicy), // seal_policy: String
+      tx.pure.string(sealPolicy), // seal_policy: String (hex string for display)
+      tx.pure.vector('u8', Array.from(policyBytes)), // seal_policy_bytes: vector<u8> (hex-decoded)
       tx.pure.u64(priceMist.toString()), // price: u64
       tx.pure.address(receiver), // receiver: address
       tx.pure.u64(maxUses.toString()), // max_uses: u64

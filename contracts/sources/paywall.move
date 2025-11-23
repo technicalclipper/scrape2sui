@@ -202,3 +202,20 @@ public fun get_treasury_address(treasury: &Treasury): address {
     treasury.treasury_address
 }
 
+/// View functions for AccessPass fields (for use by other modules)
+public fun get_access_pass_domain(pass: &AccessPass): string::String {
+    pass.domain
+}
+
+public fun get_access_pass_resource(pass: &AccessPass): string::String {
+    pass.resource
+}
+
+public fun get_access_pass_remaining(pass: &AccessPass): u64 {
+    pass.remaining
+}
+
+public fun get_access_pass_expiry(pass: &AccessPass): u64 {
+    pass.expiry
+}
+
