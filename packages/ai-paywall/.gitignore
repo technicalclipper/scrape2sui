@@ -14,3 +14,10 @@ example/*.txt
 example/decrypted-*
 example/encrypted-*
 
+# Root level generated files
+*.bin
+constants.js
+constants.d.ts
+constants.js.map
+constants.d.ts.map
+

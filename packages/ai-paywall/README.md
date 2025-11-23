@@ -179,16 +179,24 @@ fs.writeFileSync('decrypted-content.bin', Buffer.from(decrypted));
 
 ### Environment Variables
 
-Set these environment variables for registered content:
+For testing with registered content, set these environment variables:
 
 ```bash
+# Walrus/Registry Configuration (from registry-app registration)
 export WALRUS_DOMAIN=www.demo1.com
 export WALRUS_RESOURCE=/hidden/dog
 export WALRUS_BLOB_ID=wqwm17mRGo5PkXPo5p_I-RXtNIH4kdM-UnPVksBQ5lY
 export SEAL_POLICY_ID=f02db2d9f0844665d33376e822e6c2e0c150344572fb7b8f4d4b6323621b5895cbe9653375
 export RESOURCE_ENTRY_ID=0x44ace4be0c2ca4bf48bdb4f6a8069ff2beb73c3b33409035cffefa160ff40f5d
+
+# Required for client scripts
 export PRIVATE_KEY=your-private-key
+
+# Optional
+export SERVER_URL=http://localhost:3000
 ```
+
+**Note**: These values come from your registry-app registration. The package uses environment variables with sensible defaults for testing.
 
 ### Quick Example
 
