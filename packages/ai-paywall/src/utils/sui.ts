@@ -251,17 +251,77 @@ export interface ResourceEntry {
 
 /**
  * Fetch ResourceEntry from registry
+ * 
+ * Note: If the registry table lookup fails (no dynamic fields), this function
+ * will attempt to use directResourceEntryId as a fallback if provided.
  */
 export async function fetchResourceEntry(
   registryId: string,
   packageId: string,
   domain: string,
   resource: string,
-  rpcUrl?: string
+  rpcUrl?: string,
+  directResourceEntryId?: string // Optional: if provided, fetch directly
 ): Promise<ResourceEntry | null> {
   const client = createSuiClient(rpcUrl);
 
   try {
+    // If direct ResourceEntry ID is provided, fetch it directly
+    if (directResourceEntryId) {
+      console.log(`[Sui] Fetching ResourceEntry directly: ${directResourceEntryId}`);
+      const resourceEntry = await client.getObject({
+        id: directResourceEntryId,
+        options: { showContent: true },
+      });
+
+      if (!resourceEntry.data || !resourceEntry.data.content || 'fields' in resourceEntry.data.content === false) {
+        console.error('[Sui] ResourceEntry not found or invalid');
+        return null;
+      }
+
+      const fields = (resourceEntry.data.content as any).fields;
+      
+      // Helper to extract string
+      const extractString = (field: any): string => {
+        if (typeof field === 'string') return field;
+        if (field && typeof field === 'object' && 'bytes' in field) {
+          if (typeof field.bytes === 'string') {
+            try {
+              return Buffer.from(field.bytes, 'base64').toString('utf8');
+            } catch {
+              return field.bytes;
+            }
+          }
+          return String(field.bytes);
+        }
+        return String(field || '');
+      };
+
+      const entryDomain = extractString(fields.domain);
+      const entryResource = extractString(fields.resource);
+
+      // Verify it matches the requested domain and resource
+      if (entryDomain === domain && entryResource === resource) {
+        return {
+          domain: entryDomain,
+          resource: entryResource,
+          walrus_cid: extractString(fields.walrus_cid),
+          seal_policy: extractString(fields.seal_policy),
+          price: String(fields.price || '0'),
+          receiver: String(fields.receiver || ''),
+          max_uses: Number(fields.max_uses || 0),
+          validity_duration: Number(fields.validity_duration || 0),
+          owner: String(fields.owner || ''),
+          created_at: Number(fields.created_at || 0),
+          active: Boolean(fields.active !== false),
+          resource_id: directResourceEntryId,
+        };
+      } else {
+        console.warn(`[Sui] ResourceEntry domain/resource mismatch: expected ${domain}${resource}, got ${entryDomain}${entryResource}`);
+        // Continue to try table lookup
+      }
+    }
+
     // First, get the resource ID from the registry
     const registry = await client.getObject({
       id: registryId,

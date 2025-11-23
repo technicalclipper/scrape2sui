@@ -859,7 +859,24 @@ export class PaywallClient {
 
         // Step 2: If we get 200, return the content
         if (response.status === 200) {
-          return await response.json();
+          const contentType = response.headers.get('content-type');
+          if (contentType && contentType.includes('application/octet-stream')) {
+            return await response.arrayBuffer();
+          } else if (contentType && contentType.includes('application/json')) {
+            return await response.json();
+          } else {
+            // Try JSON first, fallback to arrayBuffer
+            try {
+              const text = await response.text();
+              try {
+                return JSON.parse(text);
+              } catch {
+                return Buffer.from(text, 'binary');
+              }
+            } catch {
+              return await response.arrayBuffer();
+            }
+          }
         }
 
         // Step 3: If we get 402, check for existing pass first, then purchase if needed
@@ -944,7 +961,29 @@ export class PaywallClient {
               console.error(`[PaywallClient] Warning: Failed to consume AccessPass:`, consumeError);
             }
             
-            return await contentResponse.json();
+            // Check content type to determine if it's JSON or binary
+            const contentType = contentResponse.headers.get('content-type');
+            if (contentType && contentType.includes('application/octet-stream')) {
+              // Binary content (encrypted blob)
+              return await contentResponse.arrayBuffer();
+            } else if (contentType && contentType.includes('application/json')) {
+              // JSON content
+              return await contentResponse.json();
+            } else {
+              // Try JSON first, fallback to arrayBuffer
+              try {
+                const text = await contentResponse.text();
+                try {
+                  return JSON.parse(text);
+                } catch {
+                  // Not JSON, return as buffer
+                  return Buffer.from(text, 'binary');
+                }
+              } catch {
+                // If text() fails, try arrayBuffer
+                return await contentResponse.arrayBuffer();
+              }
+            }
           } else {
             // Get error details from response
             let errorDetails = '';

@@ -27,14 +27,15 @@ export PRIVATE_KEY=your-sui-private-key
 ## Step 3: Purchase AccessPass and Fetch Content
 
 **Note**: The server is configured to use registered content:
-- Domain: `www.krish.com`
+
+- Domain: `www.newkrish.com`
 - Resource: `/hidden/dog`
 - This content is encrypted with Seal and stored on Walrus
 
 ### Option A: Simple One-Line Access (Recommended)
 
 ```javascript
-const { PaywallClient } = require('ai-paywall');
+const { PaywallClient } = require("ai-paywall");
 
 const client = new PaywallClient({
   privateKey: process.env.PRIVATE_KEY,
@@ -45,14 +46,14 @@ const client = new PaywallClient({
 // 2. Purchases AccessPass
 // 3. Signs headers
 // 4. Fetches content
-const content = await client.access('http://localhost:3000/premium');
+const content = await client.access("http://localhost:3000/premium");
 console.log(content);
 ```
 
 ### Option B: Manual Step-by-Step
 
 ```javascript
-const { PaywallClient } = require('ai-paywall');
+const { PaywallClient } = require("ai-paywall");
 
 // 1. Initialize client
 const client = new PaywallClient({
@@ -60,40 +61,46 @@ const client = new PaywallClient({
 });
 
 // 2. Get 402 challenge
-const response = await fetch('http://localhost:3000/premium');
+const response = await fetch("http://localhost:3000/premium");
 if (response.status !== 402) {
-  throw new Error('Expected 402');
+  throw new Error("Expected 402");
 }
 const challenge = await response.json();
-console.log('Challenge:', challenge);
+console.log("Challenge:", challenge);
 
 // 3. Purchase AccessPass and get signed headers
 const { headers, accessPassId } = await client.payForAccess(
-  'http://localhost:3000/premium'
+  "http://localhost:3000/premium"
 );
-console.log('AccessPass ID:', accessPassId);
+console.log("AccessPass ID:", accessPassId);
 
 // 4. Request content with headers
-const contentResponse = await fetch('http://localhost:3000/premium', { headers });
+const contentResponse = await fetch("http://localhost:3000/premium", {
+  headers,
+});
 
 // 5. Handle response
-if (contentResponse.headers.get('content-type')?.includes('application/octet-stream')) {
+if (
+  contentResponse.headers
+    .get("content-type")
+    ?.includes("application/octet-stream")
+) {
   // Encrypted blob - needs decryption
   const encryptedBlob = await contentResponse.arrayBuffer();
-  console.log('Received encrypted blob:', encryptedBlob.byteLength, 'bytes');
-  
+  console.log("Received encrypted blob:", encryptedBlob.byteLength, "bytes");
+
   // Get metadata from headers
-  const walrusCid = contentResponse.headers.get('X-Walrus-CID');
-  const sealPolicy = contentResponse.headers.get('X-Seal-Policy');
-  const resourceId = contentResponse.headers.get('X-Resource-ID');
-  
-  console.log('Metadata:', { walrusCid, sealPolicy, resourceId });
-  
+  const walrusCid = contentResponse.headers.get("X-Walrus-CID");
+  const sealPolicy = contentResponse.headers.get("X-Seal-Policy");
+  const resourceId = contentResponse.headers.get("X-Resource-ID");
+
+  console.log("Metadata:", { walrusCid, sealPolicy, resourceId });
+
   // TODO: Decrypt using Seal SDK (see README_DECRYPTION.md)
 } else {
   // JSON response (mock content)
   const json = await contentResponse.json();
-  console.log('Content:', json);
+  console.log("Content:", json);
 }
 ```
 
@@ -130,18 +137,21 @@ node example/test-complete-flow.js
 ## Troubleshooting
 
 ### "Expected 402, got 200"
+
 - Server might not have paywall middleware configured
 - Check that `/premium` route uses `paywall()` middleware
 
 ### "AccessPass not found"
+
 - Wait a few seconds after purchase for on-chain indexing
 - Verify AccessPass ID is correct
 
 ### "Signature verification failed"
+
 - Make sure you're using the correct private key
 - Check that AccessPass owner matches signer address
 
 ### "Resource not found in registry"
+
 - Make sure domain/resource match what you registered
 - Verify registry-app registration was successful
-
