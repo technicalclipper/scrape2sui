@@ -1104,7 +1104,7 @@ export class PaywallClient {
 
       // Extract policy ID from encrypted object
       // encryptedObject.id is the policy ID (37 bytes), not the full ID
-      const policyId = encryptedObject.id;
+      const policyId: any = encryptedObject.id;
       const encryptedPackageId = encryptedObject.packageId || packageId;
 
       // Convert policy ID to bytes
@@ -1136,7 +1136,7 @@ export class PaywallClient {
       // Create Sui and Seal clients (using @mysten/sui for Seal compatibility)
       const suiClient = new SealSuiClient({ url: getSealFullnodeUrl("testnet") });
       const sealClient = new SealClient({
-        suiClient: suiClient,
+        suiClient: suiClient as any, // Type assertion to handle version compatibility
         serverConfigs: SEAL_SERVER_OBJECT_IDS.map((id) => ({
           objectId: id,
           weight: 1,
@@ -1149,7 +1149,7 @@ export class PaywallClient {
         address: userAddress,
         packageId: packageId,
         ttlMin: 10,
-        suiClient: suiClient,
+        suiClient: suiClient as any, // Type assertion to handle version compatibility
       });
 
       // Sign SessionKey
@@ -1168,25 +1168,54 @@ export class PaywallClient {
           signatureString = signatureResult.signature;
         } else if (
           "signature" in signatureResult &&
-          signatureResult.signature instanceof Uint8Array
+          signatureResult.signature &&
+          typeof signatureResult.signature === "object"
         ) {
-          signatureString = toB64Seal(signatureResult.signature);
+          // Check if signature is a Uint8Array
+          const sig = (signatureResult as any).signature;
+          if (sig && (sig.constructor === Uint8Array || sig instanceof Uint8Array)) {
+            signatureString = toB64Seal(sig as Uint8Array);
+          } else {
+            throw new Error("Invalid signature format");
+          }
         } else if ("bytes" in signatureResult) {
-          const bytes =
-            signatureResult.bytes instanceof Uint8Array
-              ? signatureResult.bytes
-              : new Uint8Array(Object.values(signatureResult.bytes));
+          const bytesValue = (signatureResult as any).bytes;
+          let bytes: Uint8Array;
+          if (bytesValue instanceof Uint8Array) {
+            bytes = bytesValue;
+          } else if (Array.isArray(bytesValue)) {
+            bytes = new Uint8Array(bytesValue as number[]);
+          } else if (bytesValue && typeof bytesValue === "object") {
+            const values = Object.values(bytesValue);
+            if (values.length > 0 && typeof values[0] === "number") {
+              bytes = new Uint8Array(values as number[]);
+            } else {
+              throw new Error("Could not extract signature bytes");
+            }
+          } else {
+            throw new Error("Invalid signature bytes format");
+          }
           signatureString = toB64Seal(bytes);
         } else {
           const values = Object.values(signatureResult);
-          if (values.length > 0 && values[0] instanceof Uint8Array) {
-            signatureString = toB64Seal(values[0]);
+          if (values.length > 0 && values[0] && typeof values[0] === "object") {
+            const firstValue = values[0] as any;
+            if (firstValue && (firstValue.constructor === Uint8Array || firstValue instanceof Uint8Array)) {
+              signatureString = toB64Seal(firstValue as Uint8Array);
+            } else {
+              throw new Error("Could not extract signature");
+            }
           } else {
             throw new Error("Could not extract signature");
           }
         }
-      } else if (signatureResult instanceof Uint8Array) {
-        signatureString = toB64Seal(signatureResult);
+      } else if (signatureResult && typeof signatureResult === "object") {
+        const sigResult = signatureResult as any;
+        if (sigResult.constructor === Uint8Array || sigResult instanceof Uint8Array) {
+          signatureString = toB64Seal(sigResult as Uint8Array);
+        } else {
+          throw new Error("Invalid signature result");
+        }
       } else {
         throw new Error("Invalid signature result");
       }
