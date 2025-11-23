@@ -38,16 +38,40 @@ app.use((req, res, next) => {
 // Protected route with paywall middleware
 // Contract details are baked into the package
 // You only need: price, receiver (wallet address), domain!
-app.use('/premium', paywall({
-  price: '0.01',                    // 0.01 SUI
-  receiver: '0x35f9ccbc7bfe156def618db1ddbca994fb383ee1254539dacf49006e1ea9d6be', // Your wallet address - where payments go
-  domain: 'www.example.com',       // Your domain
-}));
+// 
+// This endpoint maps to registered content:
+// - Domain: www.krish.com
+// - Resource: /hidden/dog
+// - Registered in registry-app with Seal encryption
+app.use(
+  "/premium",
+  paywall({
+    price: "0.01", // 0.01 SUI
+    receiver:
+      "0x043d0499d17b09ffffd91a3eebb684553ca7255e273c69ed72e355950e0d77be", // Your wallet address - where payments go
+    domain: "www.krish.com", // Must match registered domain in registry-app
+  })
+);
 
 // Protected route handler
 app.get('/premium', (req, res) => {
   console.log('[Server] Route handler called for /premium');
   try {
+    // Check if we have encrypted blob (from Seal-encrypted content)
+    if (req.paywall?.encryptedBlob) {
+      console.log('[Server] Serving encrypted blob from Walrus');
+      const resourceEntry = req.paywall.resourceEntry;
+      
+      // Option 1: Serve encrypted blob as binary
+      res.setHeader('Content-Type', 'application/octet-stream');
+      res.setHeader('X-Walrus-CID', resourceEntry.walrus_cid);
+      res.setHeader('X-Seal-Policy', resourceEntry.seal_policy);
+      res.setHeader('X-Resource-ID', resourceEntry.resource_id);
+      res.send(Buffer.from(req.paywall.encryptedBlob));
+      return;
+    }
+    
+    // Option 2: Serve mock content (if no encrypted blob)
     // Access granted! User has valid pass
     const response = {
       success: true,

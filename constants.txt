@@ -1,0 +1,24 @@
+Walrus Blob ID
+w5HhcKzcAxbdfOoSW1Y_Xk4i1LbwiNrm6WVYJDuvNWQ
+
+Seal Policy ID
+3f0435b67209d368487713d895ab999271bd9e67f05cf847b7d6cdde70e48409
+
+Domain
+www.krish.com
+
+Resource
+/hidden/dog
+
+Walrus Object ID
+0x98beeefcb2c49b2648eb3289807d701623189b6eebc4ce0ee2d5879eaa767be6
+
+Storage End Epoch
+235
+
+Sui Transaction Digest
+HCJyvvqnSiiWdspciY7ptutbjh5SX3z1YxWxjju7Y9wU
+
+Resource Entry ID
+0xcb7d2b8547d42740adbb1e81ce90aa1750bad886aed3ed50f8aefad80133b4b5
+

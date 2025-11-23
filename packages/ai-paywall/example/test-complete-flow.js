@@ -23,13 +23,24 @@ const { execSync } = require('child_process');
 
 // Configuration
 const SERVER_URL = 'http://localhost:3000';
-const ENDPOINT = '/premium';
+const ENDPOINT = '/premium'; // This maps to /hidden/dog resource in registry
 
-// Contract configuration (from package config)
+// Registered content constants (from registry-app)
+const REGISTERED_CONTENT = {
+  domain: 'www.krish.com',
+  resource: '/hidden/dog',
+  walrusBlobId: 'w5HhcKzcAxbdfOoSW1Y_Xk4i1LbwiNrm6WVYJDuvNWQ',
+  sealPolicyId: '3f0435b67209d368487713d895ab999271bd9e67f05cf847b7d6cdde70e48409',
+  resourceEntryId: '0xcb7d2b8547d42740adbb1e81ce90aa1750bad886aed3ed50f8aefad80133b4b5',
+  walrusObjectId: '0x98beeefcb2c49b2648eb3289807d701623189b6eebc4ce0ee2d5879eaa767be6',
+};
+
+// Contract configuration (from package config - update with deployed contract IDs)
 const CONTRACT = {
-  packageId: '0xffac82e32d1fe9aad91100cebfa54677324cc3ee18cf04a577cb5ee6cbb0cfc2',
-  treasuryId: '0xfea51bb3a5d526dee6f3098011dd2eb54353a07b5fb8f3f826b790e320ac2aae',
-  passCounterId: '0x2191fd232443aff667c06d8bf3697544ce907a34a99bf5490ea07d42221e51a5',
+  packageId: '0xde39d60a86cd9937907be1c7bcba1f1755860a1298b3f8eb9e1883cf1a0e34ce',
+  treasuryId: '0x884da47a8d7e74e567389ecc7571f40113fce07f61e30a523f4213810fb2ec88',
+  passCounterId: '0x3ac3d18d060c796e0445faba0c7e28dd367b9e7f50736d717bab3f0bf2cfeb14',
+  registryId: '0x4973302ca0f40862276bac7aca0ee7eda82d9b87f4c10bc9bc5ceb90ad28ccea',
 };
 
 // Colors for output

@@ -9,9 +9,13 @@ const bot = new PaywallClient({
 });
 
 // 2. Access protected route - that's it!
+// Note: The /premium endpoint maps to domain: www.krish.com, resource: /hidden/dog
 async function main() {
   const content = await bot.access('http://localhost:3000/premium');
   console.log('✅ Content:', content);
+  
+  // If content is an encrypted blob, you'll need to decrypt it
+  // See test-with-decryption.js for decryption example
 }
 
 main().catch(console.error);

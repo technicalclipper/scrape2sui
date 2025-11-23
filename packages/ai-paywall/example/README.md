@@ -12,9 +12,23 @@ npm start
 # Server runs on http://localhost:3000
 ```
 
-### 2. Run Complete Flow Test
+### 2. Purchase AccessPass and Fetch Content
 
-In another terminal:
+**Option A: Simple One-Line (Recommended)**
+
+```bash
+export PRIVATE_KEY=your-private-key
+node example/simple-bot-example.js
+```
+
+**Option B: Complete Test with Decryption**
+
+```bash
+export PRIVATE_KEY=your-private-key
+node example/test-with-decryption.js
+```
+
+**Option C: Original Test (Uses Sui CLI)**
 
 ```bash
 npm test
@@ -22,12 +36,21 @@ npm test
 node example/test-complete-flow.js
 ```
 
-This will test the complete flow:
+## Quick Start Guide
+
+See **[QUICK_START.md](./QUICK_START.md)** for step-by-step instructions on:
+- Purchasing AccessPass using PaywallClient SDK
+- Fetching encrypted content
+- Decrypting content with Seal SDK
+
+## Complete Flow
+
+The tests demonstrate the complete flow:
 - ✅ Hit server → Get 402 Payment Required
-- ✅ Extract nonce from response
-- ✅ Purchase AccessPass (guided)
+- ✅ Purchase AccessPass using PaywallClient SDK (or Sui CLI)
 - ✅ Verify AccessPass on Sui
-- ✅ Request content with headers → Get hidden content
+- ✅ Request content with headers → Get encrypted blob
+- ✅ Decrypt content using Seal SDK (optional)
 
 ## Prerequisites
 
@@ -43,8 +66,22 @@ This will test the complete flow:
 ## Files
 
 - `server.js` - Example Express server with paywall middleware
-- `test-complete-flow.js` - Complete end-to-end test
+- `test-complete-flow.js` - Complete end-to-end test (uses Sui CLI)
+- `test-with-decryption.js` - Complete test with Seal decryption
+- `test-registered-content.js` - Test with actual registered content from registry-app
+- `simple-bot-example.js` - Simplest example using PaywallClient SDK
 - `bot-example.js` - Example bot using PaywallClient SDK
+
+## Registered Content
+
+The examples are configured to work with content registered in registry-app:
+- **Domain**: `www.krish.com`
+- **Resource**: `/hidden/dog`
+- **Walrus Blob ID**: `w5HhcKzcAxbdfOoSW1Y_Xk4i1LbwiNrm6WVYJDuvNWQ`
+- **Seal Policy ID**: `3f0435b67209d368487713d895ab999271bd9e67f05cf847b7d6cdde70e48409`
+- **Resource Entry ID**: `0xcb7d2b8547d42740adbb1e81ce90aa1750bad886aed3ed50f8aefad80133b4b5`
+
+The server endpoint `/premium` maps to this registered content.
 
 ## Complete Flow Test
 
