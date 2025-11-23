@@ -8,6 +8,17 @@ import { fromB64, toB64 } from '@mysten/sui.js/utils';
 import { bech32 } from 'bech32';
 import { PaymentChallenge } from './types';
 import contractConfig from './config/contract.json';
+// Seal imports for decryption (following seal/examples pattern)
+import { SealClient, SessionKey, EncryptedObject } from '@mysten/seal';
+import { SuiClient as SealSuiClient, getFullnodeUrl as getSealFullnodeUrl } from '@mysten/sui/client';
+import { Transaction } from '@mysten/sui/transactions';
+import { fromHex, toHex, toB64 as toB64Seal } from '@mysten/sui/utils';
+
+// Seal server object IDs for testnet (from seal/examples)
+const SEAL_SERVER_OBJECT_IDS = [
+  "0x73d05d62c18d9374e3ea529e8e0ed6161da1a141a94d3f76ae3fe4e99356db75",
+  "0xf5d14a81a982144ae441cd7d64b09027f116a468bd36e7eca494f750591623c8",
+];
 
 // Constants for Sui private key format
 const SUI_PRIVATE_KEY_PREFIX = 'suiprivkey';
@@ -826,14 +837,22 @@ export class PaywallClient {
    * This is the main method clients should use - everything is abstracted!
    * 
    * @param url - The protected route URL
-   * @param options - Optional: retry attempts, timeout, etc.
-   * @returns The response data from the protected route
+   * @param options - Optional: retry attempts, timeout, autoDecrypt, etc.
+   * @returns The response data from the protected route (decrypted if autoDecrypt is enabled)
    * 
    * @example
    * ```javascript
-   * const client = new PaywallClient({ privateKey: 'your-key' });
-   * const content = await client.access('http://example.com/premium');
-   * console.log(content); // Premium content!
+   * // Basic usage - returns encrypted blob
+   * const encrypted = await client.access('http://example.com/premium');
+   * 
+   * // With automatic decryption
+   * const decrypted = await client.access('http://example.com/premium', {
+   *   autoDecrypt: {
+   *     domain: 'www.example.com',
+   *     resource: '/premium',
+   *     resourceEntryId: process.env.RESOURCE_ENTRY_ID
+   *   }
+   * });
    * ```
    */
   async access(
@@ -841,6 +860,11 @@ export class PaywallClient {
     options?: {
       retries?: number;
       timeout?: number;
+      autoDecrypt?: {
+        domain: string;
+        resource: string;
+        resourceEntryId: string;
+      };
     }
   ): Promise<any> {
     const maxRetries = options?.retries || 1;
@@ -963,27 +987,48 @@ export class PaywallClient {
             
             // Check content type to determine if it's JSON or binary
             const contentType = contentResponse.headers.get('content-type');
+            let content: any;
+            
             if (contentType && contentType.includes('application/octet-stream')) {
               // Binary content (encrypted blob)
-              return await contentResponse.arrayBuffer();
+              content = await contentResponse.arrayBuffer();
             } else if (contentType && contentType.includes('application/json')) {
               // JSON content
-              return await contentResponse.json();
+              content = await contentResponse.json();
             } else {
               // Try JSON first, fallback to arrayBuffer
               try {
                 const text = await contentResponse.text();
                 try {
-                  return JSON.parse(text);
+                  content = JSON.parse(text);
                 } catch {
                   // Not JSON, return as buffer
-                  return Buffer.from(text, 'binary');
+                  content = Buffer.from(text, 'binary');
                 }
               } catch {
                 // If text() fails, try arrayBuffer
-                return await contentResponse.arrayBuffer();
+                content = await contentResponse.arrayBuffer();
               }
             }
+
+            // Auto-decrypt if requested and content is an encrypted blob
+            if (options?.autoDecrypt && (content instanceof ArrayBuffer || Buffer.isBuffer(content) || content instanceof Uint8Array)) {
+              console.log(`[PaywallClient] Auto-decrypting content...`);
+              try {
+                const decrypted = await this.decrypt(
+                  content,
+                  options.autoDecrypt.resourceEntryId,
+                  accessPassId!
+                );
+                return decrypted;
+              } catch (decryptError: any) {
+                console.error(`[PaywallClient] Auto-decryption failed:`, decryptError.message);
+                // Return encrypted blob if decryption fails (allow manual decryption)
+                return content;
+              }
+            }
+            
+            return content;
           } else {
             // Get error details from response
             let errorDetails = '';
@@ -1016,5 +1061,240 @@ export class PaywallClient {
    */
   async get(url: string, options?: { retries?: number; timeout?: number }): Promise<any> {
     return this.access(url, options);
+  }
+
+  /**
+   * Decrypt encrypted content using Seal
+   * 
+   * This method decrypts Seal-encrypted content that was fetched via access().
+   * It follows the exact pattern from seal/examples for compatibility.
+   * 
+   * @param encryptedBlob - The encrypted blob (ArrayBuffer or Uint8Array) from access()
+   * @param resourceEntryId - The ResourceEntry object ID from the registry
+   * @param accessPassId - The AccessPass ID that was used for access
+   * @returns Decrypted content as Uint8Array
+   * 
+   * @example
+   * ```javascript
+   * const encryptedBlob = await client.access(url);
+   * const decrypted = await client.decrypt(encryptedBlob, resourceEntryId, accessPassId);
+   * // Save or use decrypted content
+   * ```
+   */
+  async decrypt(
+    encryptedBlob: ArrayBuffer | Uint8Array,
+    resourceEntryId: string,
+    accessPassId: string
+  ): Promise<Uint8Array> {
+    const packageId = contractConfig.packageId;
+    const userAddress = this.keypair.toSuiAddress();
+
+    // Normalize hex string helper (same as test-registered-content.js)
+    const normalizeHexString = (hex: string): string => {
+      let cleaned = hex.startsWith("0x") ? hex.slice(2) : hex;
+      cleaned = cleaned.toLowerCase();
+      return cleaned;
+    };
+
+    try {
+      // Parse encrypted object
+      const encryptedData = new Uint8Array(encryptedBlob);
+      const encryptedObject = EncryptedObject.parse(encryptedData);
+      const threshold = encryptedObject.threshold;
+
+      // Extract policy ID from encrypted object
+      // encryptedObject.id is the policy ID (37 bytes), not the full ID
+      const policyId = encryptedObject.id;
+      const encryptedPackageId = encryptedObject.packageId || packageId;
+
+      // Convert policy ID to bytes
+      let policyIdBytes: Uint8Array;
+      if (typeof policyId === "string") {
+        const normalizedPolicyId = normalizeHexString(policyId);
+        policyIdBytes = fromHex(normalizedPolicyId);
+      } else if (policyId instanceof Uint8Array) {
+        policyIdBytes = policyId;
+      } else if (Array.isArray(policyId)) {
+        policyIdBytes = new Uint8Array(policyId);
+      } else {
+        throw new Error(`Unexpected policy ID type: ${typeof policyId}`);
+      }
+
+      // Verify policy ID is 37 bytes
+      if (policyIdBytes.length !== 37) {
+        throw new Error(
+          `Invalid policy ID length: expected 37 bytes (32-byte base + 5-byte nonce), got ${policyIdBytes.length}`
+        );
+      }
+
+      // Get policy ID as hex string for Seal operations
+      const policyIdHex =
+        typeof policyId === "string"
+          ? normalizeHexString(policyId)
+          : toHex(policyIdBytes);
+
+      // Create Sui and Seal clients (using @mysten/sui for Seal compatibility)
+      const suiClient = new SealSuiClient({ url: getSealFullnodeUrl("testnet") });
+      const sealClient = new SealClient({
+        suiClient: suiClient,
+        serverConfigs: SEAL_SERVER_OBJECT_IDS.map((id) => ({
+          objectId: id,
+          weight: 1,
+        })),
+        verifyKeyServers: false,
+      });
+
+      // Create SessionKey
+      const sessionKey = await SessionKey.create({
+        address: userAddress,
+        packageId: packageId,
+        ttlMin: 10,
+        suiClient: suiClient,
+      });
+
+      // Sign SessionKey
+      const personalMessage = sessionKey.getPersonalMessage();
+      const signatureResult = await this.keypair.signPersonalMessage(personalMessage);
+
+      // Extract signature as base64 string (following test-registered-content.js pattern)
+      let signatureString: string;
+      if (typeof signatureResult === "string") {
+        signatureString = signatureResult;
+      } else if (signatureResult && typeof signatureResult === "object") {
+        if (
+          "signature" in signatureResult &&
+          typeof signatureResult.signature === "string"
+        ) {
+          signatureString = signatureResult.signature;
+        } else if (
+          "signature" in signatureResult &&
+          signatureResult.signature instanceof Uint8Array
+        ) {
+          signatureString = toB64Seal(signatureResult.signature);
+        } else if ("bytes" in signatureResult) {
+          const bytes =
+            signatureResult.bytes instanceof Uint8Array
+              ? signatureResult.bytes
+              : new Uint8Array(Object.values(signatureResult.bytes));
+          signatureString = toB64Seal(bytes);
+        } else {
+          const values = Object.values(signatureResult);
+          if (values.length > 0 && values[0] instanceof Uint8Array) {
+            signatureString = toB64Seal(values[0]);
+          } else {
+            throw new Error("Could not extract signature");
+          }
+        }
+      } else if (signatureResult instanceof Uint8Array) {
+        signatureString = toB64Seal(signatureResult);
+      } else {
+        throw new Error("Invalid signature result");
+      }
+
+      await sessionKey.setPersonalMessageSignature(signatureString);
+
+      // Build seal_approve transaction (following seal/examples pattern)
+      const moveCallConstructor = (tx: Transaction, id: string) => {
+        // id is the policy ID as hex string
+        // Convert to bytes using fromHex, matching seal/examples pattern
+        tx.moveCall({
+          target: `${packageId}::registry::seal_approve`,
+          arguments: [
+            tx.pure.vector("u8", Array.from(fromHex(id))), // Convert hex string to bytes
+            tx.object(resourceEntryId),
+            tx.object(accessPassId),
+            tx.object("0x6"), // Clock
+          ],
+        });
+      };
+
+      // Build transaction for fetchKeys using policy ID
+      const tx = new Transaction();
+      moveCallConstructor(tx, policyIdHex);
+      const txBytes = await tx.build({
+        client: suiClient,
+        onlyTransactionKind: true,
+      });
+
+      // Fetch decryption keys (following seal/examples pattern)
+      // Use policy ID (hex string) like seal/examples do
+      await sealClient.fetchKeys({
+        ids: [policyIdHex], // Use policy ID (hex string) like seal/examples
+        txBytes,
+        sessionKey,
+        threshold: threshold,
+      });
+
+      // Decrypt content - use the SAME transaction bytes as fetchKeys
+      const decryptedData = await sealClient.decrypt({
+        data: encryptedData,
+        sessionKey,
+        txBytes: txBytes, // Use the EXACT same txBytes as fetchKeys (critical for nonce verification)
+      });
+
+      return decryptedData;
+    } catch (error) {
+      const errorMsg =
+        error instanceof Error ? error.message : String(error) || "Unknown error";
+      throw new Error(`Decryption failed: ${errorMsg}`);
+    }
+  }
+
+  /**
+   * Access and decrypt content in one call
+   * 
+   * This is a convenience method that combines access() and decrypt().
+   * It automatically fetches encrypted content and decrypts it using Seal.
+   * 
+   * @param url - The protected route URL
+   * @param domain - The domain registered in the registry
+   * @param resource - The resource path registered in the registry
+   * @param resourceEntryId - The ResourceEntry object ID (can use env var RESOURCE_ENTRY_ID)
+   * @param options - Optional: retry attempts, timeout, etc.
+   * @returns Decrypted content as Uint8Array
+   * 
+   * @example
+   * ```javascript
+   * const decrypted = await client.accessAndDecrypt(
+   *   'http://example.com/premium',
+   *   'www.example.com',
+   *   '/premium',
+   *   process.env.RESOURCE_ENTRY_ID
+   * );
+   * ```
+   */
+  async accessAndDecrypt(
+    url: string,
+    domain: string,
+    resource: string,
+    resourceEntryId: string,
+    options?: {
+      retries?: number;
+      timeout?: number;
+    }
+  ): Promise<Uint8Array> {
+    // Step 1: Access the content (gets encrypted blob)
+    const content = await this.access(url, options);
+
+    // Check if content is encrypted blob
+    let encryptedBlob: ArrayBuffer | Uint8Array;
+    if (Buffer.isBuffer(content) || content instanceof ArrayBuffer) {
+      encryptedBlob = content;
+    } else if (content instanceof Uint8Array) {
+      encryptedBlob = content;
+    } else {
+      throw new Error(`Expected encrypted blob, got ${typeof content}`);
+    }
+
+    // Step 2: Find AccessPass for this domain/resource
+    const accessPassId = await this.findExistingAccessPass(domain, resource);
+    if (!accessPassId) {
+      throw new Error(
+        `No AccessPass found for ${domain}${resource}. Make sure you have purchased an AccessPass first.`
+      );
+    }
+
+    // Step 3: Decrypt the content
+    return await this.decrypt(encryptedBlob, resourceEntryId, accessPassId);
   }
 }
