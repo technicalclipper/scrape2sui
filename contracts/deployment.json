@@ -1,25 +1,35 @@
 {
   "network": "testnet",
-  "packageId": "0xffac82e32d1fe9aad91100cebfa54677324cc3ee18cf04a577cb5ee6cbb0cfc2",
-  "moduleName": "paywall",
+  "packageId": "0x2f466054f349807da8586352d3bdd4dd3709207f833109191319adb7fb127880",
+  "modules": ["paywall", "registry"],
   "objects": {
+    "registry": {
+      "objectId": "0x934d9a889690b7552a867ebdfe47d4591dada2fc295ddb28abdad5cf995efa50",
+      "type": "0x2f466054f349807da8586352d3bdd4dd3709207f833109191319adb7fb127880::registry::Registry",
+      "owner": "Shared"
+    },
+    "adminCap": {
+      "objectId": "0x468d35fcd3515406f2ad3f3439f3999784a6c026e0cc5e6fbd409bc533cc9818",
+      "type": "0x2f466054f349807da8586352d3bdd4dd3709207f833109191319adb7fb127880::registry::AdminCap",
+      "owner": "0xdd87d36f82daca75db0a6a601e7174070ec7469946e39124e984ea25d8fd2baa"
+    },
     "treasury": {
-      "objectId": "0xfea51bb3a5d526dee6f3098011dd2eb54353a07b5fb8f3f826b790e320ac2aae",
-      "type": "0xffac82e32d1fe9aad91100cebfa54677324cc3ee18cf04a577cb5ee6cbb0cfc2::paywall::Treasury",
+      "objectId": "0x7237881892605eb8e8056387b79fb2748d43dc13b02d294fe700ac4b3c6b947f",
+      "type": "0x2f466054f349807da8586352d3bdd4dd3709207f833109191319adb7fb127880::paywall::Treasury",
       "owner": "Shared"
     },
     "passCounter": {
-      "objectId": "0x2191fd232443aff667c06d8bf3697544ce907a34a99bf5490ea07d42221e51a5",
-      "type": "0xffac82e32d1fe9aad91100cebfa54677324cc3ee18cf04a577cb5ee6cbb0cfc2::paywall::PassCounter",
+      "objectId": "0x031a60db412e7f14960b815544d95aa9f3d4e80833a8bd9f2d2f379d44db917a",
+      "type": "0x2f466054f349807da8586352d3bdd4dd3709207f833109191319adb7fb127880::paywall::PassCounter",
       "owner": "Shared"
     },
     "upgradeCap": {
-      "objectId": "0x426b7f45a6f28bf7cb9b86fb75a5cf54837f28fd0a155e1d90bae10a7256481b",
+      "objectId": "0xb37a7687c238c7c4a0449e043fce58e01dda68db3e52a71d1332241c92518006",
       "type": "0x2::package::UpgradeCap",
-      "owner": "0x1f22826945a2236a98721bb7752c5af204b90363cfe75409d401fc96709b33c5"
+      "owner": "0xdd87d36f82daca75db0a6a601e7174070ec7469946e39124e984ea25d8fd2baa"
     }
   },
-  "deployer": "0x1f22826945a2236a98721bb7752c5af204b90363cfe75409d401fc96709b33c5",
-  "transactionDigest": "5iA5kfofV9dYegXNhi8uvjobppfBgTB5gkM3WjQPsAKM",
-  "deployedAt": "2025-01-22"
+  "deployer": "0xdd87d36f82daca75db0a6a601e7174070ec7469946e39124e984ea25d8fd2baa",
+  "transactionDigest": "uve26YHuRntdm3huoriW9Z5WcqFMa3WTrKPorGj873M",
+  "deployedAt": "2024-12-19"
 }
