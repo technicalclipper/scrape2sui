@@ -1,5 +1,8 @@
+"use client"
+
 import Link from "next/link"
 import Image from "next/image"
+import { motion } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Shield, Lock, Zap, Code2, Coins, Database, Key, ArrowRight, Check, Sparkles } from "lucide-react"
@@ -8,10 +11,10 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="fixed top-0 left-0 right-0 z-50 border-b border-border/40 backdrop-blur-xl bg-background/80">
+      <header className="fixed top-0 left-0 right-0 z-50 border-b-2 border-black backdrop-blur-xl bg-white/95">
         <div className="container mx-auto px-6 py-5 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-3 group">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary via-accent to-secondary flex items-center justify-center shadow-lg shadow-primary/20 group-hover:shadow-primary/40 transition-all duration-300 overflow-hidden">
+            <div className="w-10 h-10 border-2 border-black bg-white flex items-center justify-center group-hover:bg-gray-100 transition-all duration-300 overflow-hidden">
               <Image
                 src="/walrus-logo-main.png"
                 alt="sui2scrape logo"
@@ -20,26 +23,26 @@ export default function Home() {
                 className="object-contain"
               />
             </div>
-            <span className="text-2xl font-bold tracking-tight">sui2scrape</span>
+            <span className="pixel-text text-2xl font-bold">SUI2SCRAPE</span>
           </Link>
           <nav className="hidden md:flex items-center gap-8">
             <Link
-              href="#features"
-              className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-            >
-              Features
-            </Link>
-            <Link
               href="#how-it-works"
-              className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+              className="pixel-text text-sm font-bold text-black hover:text-gray-600 transition-colors uppercase tracking-wider"
             >
-              How it Works
+              HOW IT WORKS
             </Link>
             <Link
               href="#integration"
-              className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+              className="pixel-text text-sm font-bold text-black hover:text-gray-600 transition-colors uppercase tracking-wider"
             >
-              Integration
+              INTEGRATION
+            </Link>
+            <Link
+              href="#features"
+              className="pixel-text text-sm font-bold text-black hover:text-gray-600 transition-colors uppercase tracking-wider"
+            >
+              FEATURES
             </Link>
           </nav>
         </div>
@@ -55,86 +58,101 @@ export default function Home() {
         <div className="container mx-auto px-6 relative">
           <div className="max-w-5xl mx-auto text-center">
             {/* Badge */}
-            <div className="inline-flex items-center gap-2 bg-gradient-to-r from-primary/10 to-accent/10 border border-primary/20 px-4 py-2 rounded-full text-sm font-medium mb-8 backdrop-blur-sm">
-              <Sparkles className="w-4 h-4 text-primary" />
-              <span className="text-foreground">Powered by Sui, Walrus & Seal</span>
+            <div className="inline-flex items-center gap-2 bg-black border-2 border-gray-400 px-4 py-2 rounded-sm text-sm font-mono font-bold mb-8 uppercase tracking-wider">
+              <Sparkles className="w-4 h-4 text-gray-400" />
+              <span className="text-white">POWERED BY SUI, WALRUS & SEAL</span>
             </div>
 
             {/* Main Headline */}
-            <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold mb-6 leading-[1.1] text-balance tracking-tight">
-              Make AI Agents{" "}
-              <span className="bg-gradient-to-r from-primary via-accent to-secondary bg-clip-text text-transparent">
-                Pay to Scrape
-              </span>
-            </h1>
+            <motion.h1
+              className="pixel-text text-5xl md:text-6xl lg:text-7xl mb-6 leading-[1.1] text-balance"
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+            >
+              MAKE AI AGENTS{" "}
+              <motion.span
+                className="silver-gradient"
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.8, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
+              >
+                PAY TO SCRAPE
+              </motion.span>
+            </motion.h1>
 
             {/* Subheadline */}
-            <p className="text-lg md:text-xl text-muted-foreground mb-10 text-pretty max-w-2xl mx-auto leading-relaxed">
+            <motion.p
+              className="text-base md:text-lg text-muted-foreground mb-10 text-pretty max-w-2xl mx-auto leading-relaxed font-mono"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.4, ease: [0.22, 1, 0.36, 1] }}
+            >
               Universal paywall system that enforces on-chain payments from bots and AI agents using the{" "}
-              <span className="text-foreground font-medium">x402 payment protocol</span>
-            </p>
+              <span className="text-foreground font-bold">x402 payment protocol</span>
+            </motion.p>
 
             {/* CTA Buttons */}
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-16">
               <Button
                 size="lg"
-                className="text-lg px-10 h-14 shadow-xl shadow-primary/30 hover:shadow-primary/50 transition-all group"
+                className="pixel-text text-lg px-10 h-14 bg-black text-white border-2 border-black hover:bg-gray-900 hover:border-gray-500 transition-all group uppercase tracking-wider font-mono"
                 asChild
               >
                 <Link href="#">
-                  Install Package
+                  INSTALL PACKAGE
                   <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
-                </Link>
-              </Button>
+              </Link>
+            </Button>
               <Button
                 size="lg"
                 variant="outline"
-                className="text-lg px-10 h-14 bg-background/50 backdrop-blur-sm border-border/50"
+                className="pixel-text text-lg px-10 h-14 bg-white text-black border-2 border-black hover:bg-gray-100 hover:border-gray-500 uppercase tracking-wider font-mono"
                 asChild
               >
-                <Link href="/registry">Register Now</Link>
+                <Link href="/registry">REGISTER NOW</Link>
               </Button>
             </div>
 
             {/* Code Preview */}
             <div className="max-w-3xl mx-auto">
-              <Card className="bg-card/50 backdrop-blur-xl border border-border/50 shadow-2xl overflow-hidden">
-                <div className="bg-muted/50 border-b border-border/50 px-6 py-3 flex items-center gap-2">
+              <Card className="bg-black border-2 border-black shadow-2xl overflow-hidden">
+                <div className="bg-gray-900 border-b-2 border-gray-700 px-6 py-3 flex items-center gap-2">
                   <div className="flex gap-2">
-                    <div className="w-3 h-3 rounded-full bg-destructive/60" />
-                    <div className="w-3 h-3 rounded-full bg-accent/60" />
-                    <div className="w-3 h-3 rounded-full bg-primary/60" />
+                    <div className="w-3 h-3 rounded-full bg-red-500" />
+                    <div className="w-3 h-3 rounded-full bg-yellow-500" />
+                    <div className="w-3 h-3 rounded-full bg-green-500" />
                   </div>
-                  <span className="text-sm text-muted-foreground ml-4 font-mono">middleware.js</span>
+                  <span className="text-sm text-gray-300 ml-4 font-mono font-bold">middleware.js</span>
                 </div>
-                <div className="p-6 text-left">
+                <div className="p-6 text-left bg-black">
                   <pre className="font-mono text-sm leading-relaxed">
-                    <code>
-                      <span className="text-muted-foreground">const</span>{" "}
-                      <span className="text-foreground">{"{"}</span> <span className="text-accent">paywall</span>{" "}
-                      <span className="text-foreground">{"}"}</span> <span className="text-muted-foreground">=</span>{" "}
-                      <span className="text-primary">require</span>
-                      <span className="text-foreground">(</span>
-                      <span className="text-secondary">"ai-paywall"</span>
-                      <span className="text-foreground">);</span>
+                    <code className="text-gray-100">
+                      <span className="text-blue-100">const</span>{" "}
+                      <span className="text-gray-300">{"{"}</span> <span className="text-yellow-100">paywall</span>{" "}
+                      <span className="text-gray-300">{"}"}</span> <span className="text-gray-400">=</span>{" "}
+                      <span className="text-blue-100">require</span>
+                      <span className="text-gray-300">(</span>
+                      <span className="text-green-100">"ai-paywall"</span>
+                      <span className="text-gray-300">);</span>
                       {"\n\n"}
-                      <span className="text-foreground">app</span>
-                      <span className="text-muted-foreground">.</span>
-                      <span className="text-primary">use</span>
-                      <span className="text-foreground">(</span>
-                      <span className="text-secondary">"/premium"</span>
-                      <span className="text-foreground">, </span>
-                      <span className="text-accent">paywall</span>
-                      <span className="text-foreground">({"{"}</span>
+                      <span className="text-gray-200">app</span>
+                      <span className="text-gray-400">.</span>
+                      <span className="text-blue-100">use</span>
+                      <span className="text-gray-300">(</span>
+                      <span className="text-green-100">"/premium"</span>
+                      <span className="text-gray-300">, </span>
+                      <span className="text-yellow-100">paywall</span>
+                      <span className="text-gray-300">({"{"}</span>
                       {"\n  "}
-                      <span className="text-foreground">price: </span>
-                      <span className="text-secondary">"0.1"</span>
-                      <span className="text-foreground">,</span>
+                      <span className="text-gray-300">price: </span>
+                      <span className="text-green-100">"0.1"</span>
+                      <span className="text-gray-300">,</span>
                       {"\n  "}
-                      <span className="text-foreground">receiver: </span>
-                      <span className="text-secondary">"0xABC123"</span>
+                      <span className="text-gray-300">receiver: </span>
+                      <span className="text-green-100">"0xABC123"</span>
                       {"\n"}
-                      <span className="text-foreground">{"}));"}</span>
+                      <span className="text-gray-300">{"}));"}</span>
                     </code>
                   </pre>
                 </div>
@@ -148,28 +166,34 @@ export default function Home() {
       <section className="py-20 md:py-32 bg-muted/30">
         <div className="container mx-auto px-6">
           <div className="max-w-6xl mx-auto">
-            <div className="text-center mb-16">
-              <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 text-balance leading-tight tracking-tight">
-                AI is scraping your premium content{" "}
-                <span className="bg-gradient-to-r from-destructive to-destructive/60 bg-clip-text text-transparent">
-                  for free
+            <motion.div
+              className="text-center mb-16"
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: "-100px" }}
+              transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+            >
+              <h2 className="pixel-text text-4xl md:text-5xl lg:text-6xl mb-6 text-balance leading-tight">
+                AI IS SCRAPING YOUR PREMIUM CONTENT{" "}
+                <span className="text-foreground">
+                  FOR FREE
                 </span>
               </h2>
               <p className="text-base md:text-lg text-muted-foreground text-pretty max-w-2xl mx-auto leading-relaxed">
                 Bots, crawlers, and AI agents are accessing your research, APIs, and datasets without permission or
                 payment. There's no standard enforcement mechanism.
               </p>
-            </div>
+            </motion.div>
 
             <div className="grid md:grid-cols-2 gap-8">
               {/* Without scrape2sui */}
-              <Card className="relative overflow-hidden bg-card border-destructive/20">
-                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-destructive/50 to-destructive/20" />
+              <Card className="relative overflow-hidden bg-white border-2 border-black">
+                <div className="absolute top-0 left-0 right-0 h-1 bg-black" />
                 <div className="p-8">
-                  <div className="w-12 h-12 rounded-xl bg-destructive/10 flex items-center justify-center mb-6">
+                  <div className="w-12 h-12 border-2 border-black bg-white flex items-center justify-center mb-6">
                     <span className="text-2xl">❌</span>
                   </div>
-                  <h3 className="text-xl md:text-2xl font-semibold mb-4 tracking-tight">Without sui2scrape</h3>
+                  <h3 className="pixel-text text-xl md:text-2xl mb-4">WITHOUT SUI2SCRAPE</h3>
                   <ul className="space-y-4">
                     {[              
                       "No way to monetize content accessed by bots and crawlers",
@@ -177,23 +201,23 @@ export default function Home() {
                       "Zero control over who accesses your content or how often",
                       "Content theft with no recourse or attribution",
                     ].map((item, i) => (
-                      <li key={i} className="flex items-start gap-3 text-muted-foreground">
-                        <div className="w-1.5 h-1.5 rounded-full bg-destructive/60 mt-2 flex-shrink-0" />
-                        <span className="text-base leading-relaxed">{item}</span>
+                      <li key={i} className="flex items-start gap-3 text-foreground">
+                        <div className="w-1.5 h-1.5 rounded-full bg-black mt-2 flex-shrink-0" />
+                        <span className="text-base leading-relaxed font-mono">{item}</span>
                       </li>
                     ))}
                   </ul>
                 </div>
-              </Card>
+          </Card>
 
               {/* With scrape2sui */}
-              <Card className="relative overflow-hidden bg-gradient-to-br from-primary/5 to-accent/5 border-primary/30">
-                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary to-accent" />
+              <Card className="relative overflow-hidden bg-black border-2 border-black text-white">
+                <div className="absolute top-0 left-0 right-0 h-1 bg-gray-400" />
                 <div className="p-8">
-                  <div className="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center mb-6">
-                    <Check className="w-7 h-7 text-primary" />
+                  <div className="w-12 h-12 border-2 border-gray-400 bg-black flex items-center justify-center mb-6">
+                    <Check className="w-7 h-7 text-gray-400" />
                   </div>
-                  <h3 className="text-xl md:text-2xl font-semibold mb-4 tracking-tight">With sui2scrape</h3>
+                  <h3 className="pixel-text text-xl md:text-2xl mb-4 text-white">WITH SUI2SCRAPE</h3>
                   <ul className="space-y-4">
                     {[
                       "Pay-before-access enforcement via x402",
@@ -201,9 +225,9 @@ export default function Home() {
                       "Configurable usage limits and rate control",
                       "End-to-end content encryption via Seal",
                     ].map((item, i) => (
-                      <li key={i} className="flex items-start gap-3 text-muted-foreground">
-                        <Check className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
-                        <span className="text-base leading-relaxed">{item}</span>
+                      <li key={i} className="flex items-start gap-3 text-gray-200">
+                        <Check className="w-5 h-5 text-gray-400 mt-0.5 flex-shrink-0" />
+                        <span className="text-base leading-relaxed font-mono">{item}</span>
                       </li>
                     ))}
                   </ul>
@@ -214,17 +238,221 @@ export default function Home() {
         </div>
       </section>
 
+      {/* How It Works */}
+      <section id="how-it-works" className="py-20 md:py-32 bg-gray-50">
+        <div className="container mx-auto px-6">
+          <div className="text-center mb-20">
+            <h2 className="pixel-text text-4xl md:text-5xl lg:text-6xl mb-6 text-balance leading-tight">HOW IT WORKS</h2>
+            <p className="text-xl text-muted-foreground max-w-3xl mx-auto text-pretty leading-relaxed">
+              A seamless end-to-end flow from content upload to AI agent payment
+            </p>
+          </div>
+
+          {/* System Architecture Diagram with Steps */}
+          <div className="max-w-7xl mx-auto">
+            <div className="grid lg:grid-cols-[1.3fr_1fr] gap-8 lg:gap-12 items-start">
+              {/* Architecture Image */}
+              <div className="lg:sticky lg:top-24">
+                <Card className="p-4 md:p-6 bg-white border-2 border-black">
+                  <h3 className="pixel-text text-xl md:text-2xl mb-4 md:mb-6 text-center">SYSTEM ARCHITECTURE</h3>
+                  <div className="relative w-full overflow-hidden">
+                    <Image
+                      src="/architecture.png"
+                      alt="Sui2Scrape System Architecture"
+                      width={1400}
+                      height={933}
+                      className="w-full h-auto rounded-sm"
+                      priority
+                    />
+                  </div>
+                </Card>
+              </div>
+
+              {/* Steps List */}
+              <div className="space-y-6 lg:space-y-8">
+                {[
+                  {
+                    step: "01",
+                    title: "Upload & Encrypt",
+                    description:
+                      "Content creator uploads premium content through the gateway. Automatically encrypted with Seal and stored on Walrus decentralized storage.",
+                  },
+                  {
+                    step: "02",
+                    title: "Integrate Middleware",
+                    description:
+                      "Install the npm package and protect your routes with the paywall() wrapper. Configure price, receiver address, and access rules in one line.",
+                  },
+                  {
+                    step: "03",
+                    title: "AI Agent Requests",
+                    description:
+                      "When an AI agent or bot tries to access protected content, they receive a 402 Payment Required response with payment instructions.",
+                  },
+                  {
+                    step: "04",
+                    title: "On-Chain Payment",
+                    description:
+                      "Agent pays via Sui smart contract. AccessPass is minted with usage limits, expiration, and metadata. Payment is verified on-chain.",
+                  },
+                  {
+                    step: "05",
+                    title: "Verify & Decrypt",
+                    description:
+                      "Gateway verifies the AccessPass, decrements usage counter, fetches encrypted content from Walrus, and Seal decrypts it.",
+                  },
+                  {
+                    step: "06",
+                    title: "Access Granted",
+                    description:
+                      "Decrypted content is returned to the AI agent. All transactions are logged on-chain for complete audit trail and analytics.",
+                  },
+                ].map((item, i) => (
+                  <motion.div
+                    key={i}
+                    initial={{ opacity: 0, x: -20 }}
+                    whileInView={{ opacity: 1, x: 0 }}
+                    viewport={{ once: true, margin: "-50px" }}
+                    transition={{ duration: 0.5, delay: i * 0.1 }}
+                    className="flex gap-4 md:gap-6 items-start group"
+                  >
+                    <div className="flex-shrink-0 w-16 h-16 md:w-20 md:h-20 border-2 border-black bg-black text-white flex items-center justify-center font-bold text-lg md:text-2xl font-mono group-hover:bg-gray-900 group-hover:border-gray-500 transition-all duration-300 group-hover:scale-105">
+                      {item.step}
+                    </div>
+                    <div className="flex-1 pt-1 md:pt-3">
+                      <h3 className="pixel-text text-lg md:text-xl mb-2 md:mb-3">{item.title.toUpperCase()}</h3>
+                      <p className="text-muted-foreground text-sm md:text-base leading-relaxed font-mono">{item.description}</p>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Integration */}
+      <section id="integration" className="py-20 md:py-32">
+        <div className="container mx-auto px-6">
+          <div className="max-w-5xl mx-auto">
+            <div className="text-center mb-16">
+              <h2 className="pixel-text text-4xl md:text-5xl lg:text-6xl mb-6 text-balance leading-tight">
+                INTEGRATE IN MINUTES, NOT DAYS
+              </h2>
+              <p className="text-base md:text-lg text-muted-foreground text-pretty max-w-2xl mx-auto leading-relaxed">
+                Add AI payment enforcement to your existing application with minimal code changes
+              </p>
+            </div>
+
+            <div className="space-y-8">
+              {/* Step 1 */}
+              <div>
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-8 h-8 border-2 border-black bg-black text-white flex items-center justify-center text-sm font-bold font-mono">
+                    1
+                  </div>
+                  <h3 className="pixel-text text-lg">INSTALL THE PACKAGE</h3>
+                </div>
+                <Card className="bg-black border-2 border-black overflow-hidden">
+                  <div className="p-6">
+                    <pre className="font-mono text-sm">
+                      <code className="text-gray-400">npm install ai-paywall</code>
+                    </pre>
+                  </div>
+                </Card>
+              </div>
+
+              {/* Step 2 */}
+              <div>
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-8 h-8 border-2 border-black bg-black text-white flex items-center justify-center text-sm font-bold font-mono">
+                    2
+                  </div>
+                  <h3 className="pixel-text text-lg">ADD THE MIDDLEWARE TO YOUR ROUTES</h3>
+                </div>
+                <Card className="bg-black border-2 border-black overflow-hidden">
+                  <div className="p-6">
+                    <pre className="font-mono text-sm leading-relaxed">
+                      <code>
+                        <span className="text-gray-500">const</span>{" "}
+                        <span className="text-gray-400">{"{"}</span> <span className="text-gray-300">paywall</span>{" "}
+                        <span className="text-gray-400">{"}"}</span> <span className="text-gray-500">=</span>{" "}
+                        <span className="text-gray-200">require</span>
+                        <span className="text-gray-400">(</span>
+                        <span className="text-gray-200">"ai-paywall"</span>
+                        <span className="text-gray-400">);</span>
+                        {"\n\n"}
+                        <span className="text-gray-300">app</span>
+                        <span className="text-gray-500">.</span>
+                        <span className="text-gray-200">use</span>
+                        <span className="text-gray-400">(</span>
+                        <span className="text-gray-200">"/api/premium"</span>
+                        <span className="text-gray-400">, </span>
+                        <span className="text-gray-300">paywall</span>
+                        <span className="text-gray-400">({"{"}</span>
+                        {"\n  "}
+                        <span className="text-gray-400">price: </span>
+                        <span className="text-gray-200">"0.1"</span>
+                        <span className="text-gray-400">,</span>
+                        {"\n  "}
+                        <span className="text-gray-400">receiver: </span>
+                        <span className="text-gray-200">"0xYourSuiAddress"</span>
+                        <span className="text-gray-400">,</span>
+                        {"\n  "}
+                        <span className="text-gray-400">domain: </span>
+                        <span className="text-gray-200">"yoursite.com"</span>
+                        <span className="text-gray-400">,</span>
+                        {"\n  "}
+                        <span className="text-gray-400">usageLimit: </span>
+                        <span className="text-gray-300">100</span>
+                        {"\n"}
+                        <span className="text-gray-400">{"}));"}</span>
+                      </code>
+                    </pre>
+                  </div>
+                </Card>
+              </div>
+
+              {/* Step 3 */}
+              <div>
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-8 h-8 border-2 border-black bg-black text-white flex items-center justify-center text-sm font-bold font-mono">
+                    3
+                  </div>
+                  <h3 className="pixel-text text-lg">THAT'S IT! YOUR CONTENT IS NOW PROTECTED</h3>
+                </div>
+                <Card className="bg-white border-2 border-black">
+                  <div className="p-6">
+                    <p className="text-foreground leading-relaxed font-mono">
+                      AI agents will now receive payment instructions when they try to access your protected routes.
+                      After successful payment, they'll receive an AccessPass and gain access to your premium
+                      content.
+                    </p>
+                  </div>
+          </Card>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Features Grid */}
       <section id="features" className="py-20 md:py-32">
         <div className="container mx-auto px-6">
-          <div className="text-center mb-20">
-            <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 text-balance leading-tight tracking-tight">
-              Everything you need to protect & monetize
+          <motion.div
+            className="text-center mb-20"
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-100px" }}
+            transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+          >
+            <h2 className="pixel-text text-4xl md:text-5xl lg:text-6xl mb-6 text-balance leading-tight">
+              EVERYTHING YOU NEED TO PROTECT & MONETIZE
             </h2>
             <p className="text-xl text-muted-foreground max-w-3xl mx-auto text-pretty leading-relaxed">
               A complete solution for content creators, API providers, and data publishers
             </p>
-          </div>
+          </motion.div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto">
             {[
@@ -270,215 +498,37 @@ export default function Home() {
                 description: "Fully decentralized infrastructure with no central authority or single point of failure.",
               },
             ].map((feature, i) => (
-              <Card
+              <motion.div
                 key={i}
-                className="p-6 bg-card/50 backdrop-blur-sm border border-border/50 hover:border-primary/50 transition-all duration-300 hover:shadow-xl hover:shadow-primary/5 group"
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: "-50px" }}
+                transition={{ duration: 0.5, delay: i * 0.1, ease: [0.22, 1, 0.36, 1] }}
               >
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary/10 to-accent/10 flex items-center justify-center mb-4 group-hover:from-primary/20 group-hover:to-accent/20 transition-all">
-                  <feature.icon className="w-6 h-6 text-primary" />
+                <Card
+                  className="p-6 bg-white border-2 border-black hover:border-gray-500 transition-all duration-300 hover:shadow-lg group"
+                >
+                <div className="w-12 h-12 border-2 border-black bg-white flex items-center justify-center mb-4 group-hover:bg-gray-100 transition-all">
+                  <feature.icon className="w-6 h-6 text-black" />
                 </div>
-                <h3 className="text-lg font-bold mb-2">{feature.title}</h3>
-                <p className="text-sm text-muted-foreground leading-relaxed">{feature.description}</p>
+                <h3 className="pixel-text text-lg mb-2">{feature.title.toUpperCase()}</h3>
+                <p className="text-sm text-muted-foreground leading-relaxed font-mono">{feature.description}</p>
               </Card>
+              </motion.div>
             ))}
-          </div>
-        </div>
-      </section>
-
-      {/* How It Works */}
-      <section id="how-it-works" className="py-20 md:py-32 bg-muted/30">
-        <div className="container mx-auto px-6">
-          <div className="text-center mb-20">
-            <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 text-balance leading-tight tracking-tight">How it works</h2>
-            <p className="text-xl text-muted-foreground max-w-3xl mx-auto text-pretty leading-relaxed">
-              A seamless end-to-end flow from content upload to AI agent payment
-            </p>
-          </div>
-
-          {/* System Architecture Diagram */}
-          <div className="max-w-6xl mx-auto mb-20">
-            <Card className="p-8 md:p-12 bg-card/50 backdrop-blur-sm border border-border/50">
-              <h3 className="text-2xl font-bold mb-8 text-center">System Architecture</h3>
-              <div className="relative w-full">
-                <Image
-                  src="/architecture.png"
-                  alt="Sui2Scrape System Architecture"
-                  width={1200}
-                  height={800}
-                  className="w-full h-auto rounded-lg"
-                  priority
-                />
-              </div>
-            </Card>
-          </div>
-
-          <div className="max-w-4xl mx-auto space-y-12">
-            {[
-              {
-                step: "01",
-                title: "Upload & Encrypt",
-                description:
-                  "Content creator uploads premium content through the gateway. Automatically encrypted with Seal and stored on Walrus decentralized storage.",
-              },
-              {
-                step: "02",
-                title: "Integrate Middleware",
-                description:
-                  "Install the npm package and protect your routes with the paywall() wrapper. Configure price, receiver address, and access rules in one line.",
-              },
-              {
-                step: "03",
-                title: "AI Agent Requests",
-                description:
-                  "When an AI agent or bot tries to access protected content, they receive a 402 Payment Required response with payment instructions.",
-              },
-              {
-                step: "04",
-                title: "On-Chain Payment",
-                description:
-                  "Agent pays via Sui smart contract. AccessPass is minted with usage limits, expiration, and metadata. Payment is verified on-chain.",
-              },
-              {
-                step: "05",
-                title: "Verify & Decrypt",
-                description:
-                  "Gateway verifies the AccessPass, decrements usage counter, fetches encrypted content from Walrus, and Seal decrypts it.",
-              },
-              {
-                step: "06",
-                title: "Access Granted",
-                description:
-                  "Decrypted content is returned to the AI agent. All transactions are logged on-chain for complete audit trail and analytics.",
-              },
-            ].map((item, i) => (
-              <div key={i} className="flex gap-8 items-start group">
-                <div className="flex-shrink-0 w-20 h-20 rounded-2xl bg-gradient-to-br from-primary/10 to-accent/10 border border-primary/20 flex items-center justify-center font-bold text-2xl text-primary group-hover:from-primary/20 group-hover:to-accent/20 group-hover:border-primary/40 transition-all duration-300 group-hover:scale-105">
-                  {item.step}
-                </div>
-                <div className="flex-1 pt-3">
-                  <h3 className="text-xl md:text-2xl font-semibold mb-3 tracking-tight">{item.title}</h3>
-                  <p className="text-muted-foreground text-lg leading-relaxed">{item.description}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Integration */}
-      <section id="integration" className="py-20 md:py-32">
-        <div className="container mx-auto px-6">
-          <div className="max-w-5xl mx-auto">
-            <div className="text-center mb-16">
-              <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 text-balance leading-tight tracking-tight">
-                Integrate in minutes, not days
-              </h2>
-              <p className="text-base md:text-lg text-muted-foreground text-pretty max-w-2xl mx-auto leading-relaxed">
-                Add AI payment enforcement to your existing application with minimal code changes
-              </p>
-            </div>
-
-            <div className="space-y-8">
-              {/* Step 1 */}
-              <div>
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center text-sm font-bold text-primary">
-                    1
-                  </div>
-                  <h3 className="text-lg font-semibold">Install the package</h3>
-                </div>
-                <Card className="bg-muted/50 backdrop-blur-sm border border-border/50 overflow-hidden">
-                  <div className="p-6">
-                    <pre className="font-mono text-sm">
-                      <code className="text-foreground">npm install ai-paywall</code>
-                    </pre>
-                  </div>
-                </Card>
-              </div>
-
-              {/* Step 2 */}
-              <div>
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center text-sm font-bold text-primary">
-                    2
-                  </div>
-                  <h3 className="text-lg font-semibold">Add the middleware to your routes</h3>
-                </div>
-                <Card className="bg-muted/50 backdrop-blur-sm border border-border/50 overflow-hidden">
-                  <div className="p-6">
-                    <pre className="font-mono text-sm leading-relaxed">
-                      <code>
-                        <span className="text-muted-foreground">const</span>{" "}
-                        <span className="text-foreground">{"{"}</span> <span className="text-accent">paywall</span>{" "}
-                        <span className="text-foreground">{"}"}</span> <span className="text-muted-foreground">=</span>{" "}
-                        <span className="text-primary">require</span>
-                        <span className="text-foreground">(</span>
-                        <span className="text-secondary">"ai-paywall"</span>
-                        <span className="text-foreground">);</span>
-                        {"\n\n"}
-                        <span className="text-foreground">app</span>
-                        <span className="text-muted-foreground">.</span>
-                        <span className="text-primary">use</span>
-                        <span className="text-foreground">(</span>
-                        <span className="text-secondary">"/api/premium"</span>
-                        <span className="text-foreground">, </span>
-                        <span className="text-accent">paywall</span>
-                        <span className="text-foreground">({"{"}</span>
-                        {"\n  "}
-                        <span className="text-foreground">price: </span>
-                        <span className="text-secondary">"0.1"</span>
-                        <span className="text-foreground">,</span>
-                        {"\n  "}
-                        <span className="text-foreground">receiver: </span>
-                        <span className="text-secondary">"0xYourSuiAddress"</span>
-                        <span className="text-foreground">,</span>
-                        {"\n  "}
-                        <span className="text-foreground">domain: </span>
-                        <span className="text-secondary">"yoursite.com"</span>
-                        <span className="text-foreground">,</span>
-                        {"\n  "}
-                        <span className="text-foreground">usageLimit: </span>
-                        <span className="text-accent">100</span>
-                        {"\n"}
-                        <span className="text-foreground">{"}));"}</span>
-                      </code>
-                    </pre>
-                  </div>
-                </Card>
-              </div>
-
-              {/* Step 3 */}
-              <div>
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center text-sm font-bold text-primary">
-                    3
-                  </div>
-                  <h3 className="text-lg font-semibold">That's it! Your content is now protected</h3>
-                </div>
-                <Card className="bg-gradient-to-br from-primary/5 to-accent/5 border-primary/30">
-                  <div className="p-6">
-                    <p className="text-muted-foreground leading-relaxed">
-                      AI agents will now receive payment instructions when they try to access your protected routes.
-                      After successful payment, they'll receive an AccessPass and gain access to your premium
-                      content.
-                    </p>
-                  </div>
-                </Card>
-              </div>
-            </div>
           </div>
         </div>
       </section>
 
       {/* Tech Stack */}
-      <section className="py-20 md:py-32 bg-muted/30">
+      <section className="py-20 md:py-32 bg-gray-50">
         <div className="container mx-auto px-6">
           <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 text-balance leading-tight tracking-tight">
-              Built on cutting-edge technology
+            <h2 className="pixel-text text-4xl md:text-5xl lg:text-6xl mb-6 text-balance leading-tight">
+              POWERED BY SUI, WALRUS & SEAL
             </h2>
-            <p className="text-xl text-muted-foreground max-w-3xl mx-auto text-pretty leading-relaxed">
-              Three critical technologies working together to enforce AI payments
+            <p className="text-xl text-muted-foreground max-w-3xl mx-auto text-pretty leading-relaxed font-mono">
+              Blockchain payments, decentralized storage, and encryption working together to protect your content
             </p>
           </div>
 
@@ -505,9 +555,9 @@ export default function Home() {
             ].map((tech, i) => (
               <Card
                 key={i}
-                className="p-8 bg-card/50 backdrop-blur-sm border border-border/50 hover:border-primary/50 transition-all duration-300 group"
+                className="p-8 bg-white border-2 border-black hover:border-gray-500 transition-all duration-300 group"
               >
-                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary/10 to-accent/10 flex items-center justify-center mb-6 group-hover:from-primary/20 group-hover:to-accent/20 transition-all">
+                <div className="w-16 h-16 border-2 border-black bg-white flex items-center justify-center mb-6 group-hover:bg-gray-100 transition-all">
                   {tech.logo ? (
                     <Image
                       src={tech.logo}
@@ -517,50 +567,46 @@ export default function Home() {
                       className="object-contain"
                     />
                   ) : tech.icon ? (
-                    <tech.icon className="w-8 h-8 text-primary" />
+                    <tech.icon className="w-8 h-8 text-black" />
                   ) : null}
                 </div>
-                <h3 className="text-xl md:text-2xl font-semibold mb-4 tracking-tight">{tech.title}</h3>
-                <p className="text-muted-foreground leading-relaxed">{tech.description}</p>
-              </Card>
+                <h3 className="pixel-text text-xl md:text-2xl mb-4">{tech.title.toUpperCase()}</h3>
+                <p className="text-muted-foreground leading-relaxed font-mono">{tech.description}</p>
+          </Card>
             ))}
           </div>
         </div>
       </section>
 
       {/* CTA Section */}
-      <section className="py-20 md:py-32 relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-accent/5 to-background pointer-events-none" />
-        <div className="absolute top-0 left-1/4 w-96 h-96 bg-primary/20 rounded-full blur-[140px] pointer-events-none" />
-        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-accent/20 rounded-full blur-[140px] pointer-events-none" />
-
+      <section className="py-20 md:py-32 relative overflow-hidden bg-black text-white">
         <div className="container mx-auto px-6 relative">
           <div className="max-w-4xl mx-auto text-center">
-            <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 text-balance leading-tight tracking-tight">
-              Ready to monetize your content?
+            <h2 className="pixel-text text-4xl md:text-5xl lg:text-6xl mb-6 text-balance leading-tight text-white">
+              READY TO MONETIZE YOUR CONTENT?
             </h2>
-            <p className="text-xl text-muted-foreground mb-12 text-pretty max-w-2xl mx-auto leading-relaxed">
+            <p className="text-xl text-gray-300 mb-12 text-pretty max-w-2xl mx-auto leading-relaxed font-mono">
               Join the future of content protection and start earning from AI agents accessing your premium data.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
               <Button
                 size="lg"
-                className="text-lg px-10 h-14 shadow-xl shadow-primary/30 hover:shadow-primary/50 transition-all group"
+                className="pixel-text text-lg px-10 h-14 bg-white text-black border-2 border-white hover:bg-gray-200 hover:border-gray-400 transition-all group uppercase tracking-wider font-mono"
                 asChild
               >
                 <Link href="/registry">
-                  Get Started Now
+                  GET STARTED NOW
                   <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
                 </Link>
               </Button>
               <Button
                 size="lg"
                 variant="outline"
-                className="text-lg px-10 h-14 bg-background/50 backdrop-blur-sm border-border/50"
+                className="pixel-text text-lg px-10 h-14 bg-black text-white border-2 border-white hover:bg-gray-900 hover:border-gray-400 uppercase tracking-wider font-mono"
                 asChild
               >
                 <a href="https://github.com/technicalclipper/scrape2sui" target="_blank" rel="noopener noreferrer">
-                  View on GitHub
+                  VIEW ON GITHUB
                 </a>
               </Button>
             </div>
@@ -569,11 +615,11 @@ export default function Home() {
       </section>
 
       {/* Footer */}
-      <footer className="py-12 border-t border-border/40 bg-muted/30">
+      <footer className="py-12 border-t-2 border-black bg-white">
         <div className="container mx-auto px-6">
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary via-accent to-secondary flex items-center justify-center overflow-hidden">
+              <div className="w-10 h-10 border-2 border-black bg-white flex items-center justify-center overflow-hidden">
                 <Image
                   src="/walrus-logo-main.png"
                   alt="sui2scrape logo"
@@ -582,13 +628,13 @@ export default function Home() {
                   className="object-contain"
                 />
               </div>
-              <span className="text-xl font-bold">sui2scrape</span>
+              <span className="pixel-text text-xl font-bold">SUI2SCRAPE</span>
             </div>
-            <p className="text-sm text-muted-foreground">
-              © 2025 sui2scrape. Powered by Sui, Walrus & Seal. Built for the AI era.
+            <p className="text-sm text-muted-foreground font-mono uppercase tracking-wider">
+              © 2025 SUI2SCRAPE. POWERED BY SUI, WALRUS & SEAL. BUILT FOR THE AI ERA.
             </p>
-          </div>
         </div>
+      </div>
       </footer>
     </div>
   )
