@@ -68,6 +68,175 @@ export class PaywallClient {
   }
 
   /**
+   * Find existing AccessPass for a domain/resource owned by this wallet
+   * Returns the AccessPass object ID if found, null otherwise
+   */
+  async findExistingAccessPass(domain: string, resource: string): Promise<string | null> {
+    const ownerAddress = this.keypair.toSuiAddress();
+    console.log(`[PaywallClient] Searching for existing AccessPass for ${domain}${resource}...`);
+    
+    try {
+      // Query PassPurchased events to find passes owned by this address
+      // Since AccessPass is a shared object, we can't query by owner directly
+      // Instead, we query events where owner matches
+      const events = await this.client.queryEvents({
+        query: {
+          MoveModule: {
+            package: contractConfig.packageId,
+            module: 'paywall',
+          },
+        },
+        order: 'descending',
+        limit: 100, // Check last 100 purchases
+      });
+
+      // Filter events for PassPurchased where owner matches and domain/resource match
+      const matchingEvents = events.data.filter((event) => {
+        if (event.type?.includes('PassPurchased')) {
+          const parsedJson = event.parsedJson as any;
+          if (parsedJson && parsedJson.owner === ownerAddress) {
+            // Normalize paths for comparison (remove trailing slashes)
+            const eventDomain = parsedJson.domain || '';
+            const eventResource = parsedJson.resource || '';
+            const normalizedEventResource = eventResource === '/' ? '/' : eventResource.replace(/\/$/, '');
+            const normalizedTargetResource = resource === '/' ? '/' : resource.replace(/\/$/, '');
+            
+            return eventDomain === domain && normalizedEventResource === normalizedTargetResource;
+          }
+        }
+        return false;
+      });
+
+      if (matchingEvents.length === 0) {
+        console.log(`[PaywallClient] No existing AccessPass found`);
+        return null;
+      }
+
+      // Get the most recent matching event
+      const mostRecentEvent = matchingEvents[0];
+      console.log(`[PaywallClient] Found ${matchingEvents.length} matching event(s), checking most recent...`);
+
+      // Find the AccessPass object ID from transaction
+      // The AccessPass object ID should be in the transaction's created objects
+      if (mostRecentEvent.id?.txDigest) {
+        const txDigest = mostRecentEvent.id.txDigest;
+        const tx = await this.client.getTransactionBlock({
+          digest: txDigest,
+          options: {
+            showObjectChanges: true,
+          },
+        });
+
+        if (tx.objectChanges) {
+          // Find the AccessPass object that was created in this transaction
+          for (const change of tx.objectChanges) {
+            if (change.type === 'created' && change.objectType && change.objectType.includes('AccessPass')) {
+              const passId = change.objectId;
+              
+              // Verify this pass is still valid by fetching it
+              try {
+                const pass = await this.client.getObject({
+                  id: passId,
+                  options: {
+                    showContent: true,
+                  },
+                });
+
+                if (pass.data && pass.data.content && 'fields' in pass.data.content) {
+                  const fields = (pass.data.content as any).fields;
+                  
+                  // Extract string fields (handle Sui string::String format)
+                  const extractString = (field: any): string => {
+                    if (typeof field === 'string') return field;
+                    if (field && typeof field === 'object' && 'bytes' in field) {
+                      if (typeof field.bytes === 'string') {
+                        try {
+                          return Buffer.from(field.bytes, 'base64').toString('utf8');
+                        } catch {
+                          return field.bytes;
+                        }
+                      }
+                      return String(field.bytes);
+                    }
+                    return String(field || '');
+                  };
+
+                  const passDomain = extractString(fields.domain);
+                  const passResource = extractString(fields.resource);
+                  const passOwner = String(fields.owner || '');
+                  const remaining = Number(fields.remaining || 0);
+                  const expiry = Number(fields.expiry || 0);
+
+                  // Verify it matches and is still valid
+                  const normalizedPassResource = passResource === '/' ? '/' : passResource.replace(/\/$/, '');
+                  const normalizedTargetResource = resource === '/' ? '/' : resource.replace(/\/$/, '');
+                  
+                  if (passOwner === ownerAddress && 
+                      passDomain === domain && 
+                      normalizedPassResource === normalizedTargetResource &&
+                      remaining > 0 &&
+                      (expiry === 0 || Date.now() < expiry)) {
+                    console.log(`[PaywallClient] ✅ Found valid existing AccessPass: ${passId} (remaining: ${remaining})`);
+                    return passId;
+                  }
+                }
+              } catch (error) {
+                console.log(`[PaywallClient] Could not verify pass ${passId}:`, error);
+                continue;
+              }
+            }
+          }
+        }
+      }
+
+      console.log(`[PaywallClient] No valid existing AccessPass found`);
+      return null;
+    } catch (error: any) {
+      console.error(`[PaywallClient] Error searching for existing AccessPass:`, error);
+      // Don't throw - just return null and purchase a new pass
+      return null;
+    }
+  }
+
+  /**
+   * Consume one use from an AccessPass (decrement remaining)
+   */
+  async consumeAccessPass(passId: string): Promise<void> {
+    console.log(`[PaywallClient] Consuming AccessPass: ${passId}`);
+    
+    try {
+      const sender = this.keypair.toSuiAddress();
+      const tx = new TransactionBlock();
+      tx.setSender(sender);
+
+      // Call consume_pass function
+      tx.moveCall({
+        target: `${contractConfig.packageId}::paywall::consume_pass`,
+        arguments: [
+          tx.object(passId),
+        ],
+      });
+
+      tx.setGasBudget(10000000);
+
+      // Sign and execute
+      const result = await this.client.signAndExecuteTransactionBlock({
+        signer: this.keypair,
+        transactionBlock: tx,
+        options: {
+          showEffects: true,
+          showEvents: true,
+        },
+      });
+
+      console.log(`[PaywallClient] ✅ AccessPass consumed (remaining uses decremented)`);
+    } catch (error: any) {
+      console.error(`[PaywallClient] Error consuming AccessPass:`, error);
+      throw new Error(`Failed to consume AccessPass: ${error.message || 'Unknown error'}`);
+    }
+  }
+
+  /**
    * Get all coins owned by the wallet (paginated to get all coins)
    */
   async getCoins(): Promise<Array<{ coinId: string; balance: bigint }>> {
@@ -693,36 +862,46 @@ export class PaywallClient {
           return await response.json();
         }
 
-        // Step 3: If we get 402, purchase AccessPass and retry
+        // Step 3: If we get 402, check for existing pass first, then purchase if needed
         if (response.status === 402) {
           const challenge = await response.json() as PaymentChallenge;
           
-          console.log(`[PaywallClient] Payment required: ${challenge.price} SUI`);
-          console.log(`[PaywallClient] Purchasing AccessPass...`);
+          // Normalize resource path (remove trailing slash except for root)
+          const normalizedResource = challenge.resource === '/' ? '/' : challenge.resource.replace(/\/$/, '');
           
-          // Purchase AccessPass (automatically handles coin splitting)
-          const accessPassId = await this.purchaseAccessPass({
-            price: challenge.price,
-            domain: challenge.domain,
-            resource: challenge.resource,
-            remaining: 10, // Default remaining uses
-            expiry: 0, // No expiry
-            nonce: challenge.nonce,
-            receiver: challenge.receiver,
-          });
+          // Check if we already have a valid AccessPass for this domain/resource
+          let accessPassId = await this.findExistingAccessPass(challenge.domain, normalizedResource);
+          
+          if (!accessPassId) {
+            console.log(`[PaywallClient] No existing AccessPass found, purchasing new one...`);
+            console.log(`[PaywallClient] Payment required: ${challenge.price} SUI`);
+            
+            // Purchase AccessPass (automatically handles coin splitting)
+            accessPassId = await this.purchaseAccessPass({
+              price: challenge.price,
+              domain: challenge.domain,
+              resource: normalizedResource,
+              remaining: 10, // Default remaining uses
+              expiry: 0, // No expiry
+              nonce: challenge.nonce,
+              receiver: challenge.receiver,
+            });
 
-          console.log(`[PaywallClient] AccessPass purchased: ${accessPassId}`);
-
-          // Wait a moment for the AccessPass to be indexed on-chain
-          console.log(`[PaywallClient] Waiting for AccessPass to be indexed...`);
-          await new Promise(resolve => setTimeout(resolve, 2000));
+            console.log(`[PaywallClient] AccessPass purchased: ${accessPassId}`);
+            
+            // Wait a moment for the AccessPass to be indexed on-chain
+            console.log(`[PaywallClient] Waiting for AccessPass to be indexed...`);
+            await new Promise(resolve => setTimeout(resolve, 2000));
+          } else {
+            console.log(`[PaywallClient] Using existing AccessPass: ${accessPassId}`);
+          }
 
           // Sign headers
           const timestamp = Date.now().toString();
           const signature = await this.signMessage(
-            accessPassId,
+            accessPassId!,
             challenge.domain,
-            challenge.resource,
+            normalizedResource,
             timestamp
           );
 
@@ -757,6 +936,14 @@ export class PaywallClient {
           });
 
           if (contentResponse.status === 200) {
+            // Success! Now consume one use from the AccessPass
+            try {
+              await this.consumeAccessPass(accessPassId!);
+            } catch (consumeError) {
+              // Log error but don't fail the request - consumption is best-effort
+              console.error(`[PaywallClient] Warning: Failed to consume AccessPass:`, consumeError);
+            }
+            
             return await contentResponse.json();
           } else {
             // Get error details from response
