@@ -40,6 +40,8 @@ app.get('/premium', (req, res) => {
 
 **Even Simpler - Just private key!** All contract interactions are abstracted.
 
+#### Basic Usage - Encrypted Content
+
 ```javascript
 const { PaywallClient } = require('ai-paywall');
 
@@ -49,9 +51,57 @@ const bot = new PaywallClient({
 });
 
 // 2. Access protected route - ONE LINE!
-const content = await bot.access('http://example.com/premium');
+const encryptedBlob = await bot.access('http://example.com/premium');
 
-console.log(content); // Premium content!
+// Returns encrypted blob (ArrayBuffer) that needs to be decrypted
+```
+
+#### Automatic Decryption - One Line!
+
+```javascript
+const { PaywallClient } = require('ai-paywall');
+
+const bot = new PaywallClient({
+  privateKey: process.env.PRIVATE_KEY,
+});
+
+// Access and decrypt in one call (requires resource metadata)
+const decryptedContent = await bot.accessAndDecrypt(
+  'http://example.com/premium',
+  process.env.WALRUS_DOMAIN || 'www.example.com',
+  process.env.WALRUS_RESOURCE || '/premium',
+  process.env.RESOURCE_ENTRY_ID // From registry registration
+);
+
+// Content is automatically decrypted using Seal!
+```
+
+#### Step-by-Step Decryption
+
+```javascript
+const { PaywallClient } = require('ai-paywall');
+
+const bot = new PaywallClient({
+  privateKey: process.env.PRIVATE_KEY,
+});
+
+// Step 1: Access (returns encrypted blob)
+const encryptedBlob = await bot.access('http://example.com/premium');
+
+// Step 2: Find AccessPass (used for access)
+const accessPassId = await bot.findExistingAccessPass(
+  process.env.WALRUS_DOMAIN || 'www.example.com',
+  process.env.WALRUS_RESOURCE || '/premium'
+);
+
+// Step 3: Decrypt using Seal
+const decryptedContent = await bot.decrypt(
+  encryptedBlob,
+  process.env.RESOURCE_ENTRY_ID, // From registry
+  accessPassId
+);
+
+// Use decrypted content
 ```
 
 **What happens automatically:**
@@ -59,7 +109,8 @@ console.log(content); // Premium content!
 - ✅ Purchases AccessPass (handles coin splitting automatically)
 - ✅ Signs headers
 - ✅ Makes authenticated request
-- ✅ Returns content
+- ✅ Returns encrypted content
+- ✅ (Optional) Automatically decrypts using Seal
 
 **That's it!** No need to:
 - ❌ Manually handle 402 responses
@@ -67,6 +118,7 @@ console.log(content); // Premium content!
 - ❌ Call contract functions
 - ❌ Sign headers
 - ❌ Manage AccessPass lifecycle
+- ❌ Manually handle Seal encryption/decryption
 
 ## How It Works
 
@@ -96,10 +148,47 @@ Clients must include these headers when accessing protected routes:
 ## Examples
 
 See the [examples](./example/) directory for:
-- **Simple bot example** (`example/simple-bot-example.js`) - Just 4 lines!
-- **Full bot example** (`example/bot-example.js`) - With advanced usage
+- **Step-by-step flow** (`example/step-by-step-flow.js`) - Complete flow: 402 → Purchase → Access ✨
+- **Simple bot example** (`example/bot-example.js`) - Basic usage
+- **Registered content test** (`example/test-registered-content.js`) - Full encryption/decryption flow
 - **Example server** (`example/server.js`) - Express server setup
 - **Complete test** (`example/test-complete-flow.js`) - End-to-end test
+- **Decrypt file** (`example/decrypt-file.js`) - Decrypt saved encrypted blob
+
+### Decryption Example
+
+```javascript
+const { PaywallClient } = require('ai-paywall');
+
+const client = new PaywallClient({
+  privateKey: process.env.PRIVATE_KEY,
+});
+
+// Option 1: Access and decrypt in one call
+const decrypted = await client.accessAndDecrypt(
+  'http://localhost:3000/hidden/dog',
+  process.env.WALRUS_DOMAIN,
+  process.env.WALRUS_RESOURCE,
+  process.env.RESOURCE_ENTRY_ID
+);
+
+// Save decrypted content (automatically detects file type: .jpg, .png, .txt, etc.)
+const fs = require('fs');
+fs.writeFileSync('decrypted-content.bin', Buffer.from(decrypted));
+```
+
+### Environment Variables
+
+Set these environment variables for registered content:
+
+```bash
+export WALRUS_DOMAIN=www.demo1.com
+export WALRUS_RESOURCE=/hidden/dog
+export WALRUS_BLOB_ID=wqwm17mRGo5PkXPo5p_I-RXtNIH4kdM-UnPVksBQ5lY
+export SEAL_POLICY_ID=f02db2d9f0844665d33376e822e6c2e0c150344572fb7b8f4d4b6323621b5895cbe9653375
+export RESOURCE_ENTRY_ID=0x44ace4be0c2ca4bf48bdb4f6a8069ff2beb73c3b33409035cffefa160ff40f5d
+export PRIVATE_KEY=your-private-key
+```
 
 ### Quick Example
 
@@ -179,5 +268,6 @@ The middleware throws custom errors:
 
 ## Documentation
 
-See `INTEGRATION_GUIDE.md` for detailed integration instructions.
+- **[ARCHITECTURE.md](./ARCHITECTURE.md)** - Complete system architecture explanation
+- See `INTEGRATION_GUIDE.md` for detailed integration instructions.
 

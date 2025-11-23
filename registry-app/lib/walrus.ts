@@ -1,16 +1,11 @@
-// Walrus storage integration using @mysten/walrus SDK
-import { SuiClient, getFullnodeUrl } from "@mysten/sui/client"
-import { walrus } from "@mysten/walrus"
-import type { Signer } from "@mysten/sui/cryptography"
-import { Ed25519Keypair } from "@mysten/sui/keypairs/ed25519"
-import { fromHex } from "@mysten/sui/utils"
+// Walrus storage integration - following seal/examples pattern
+// Uses simple HTTP PUT requests to Walrus publishers (no SDK needed)
+// This matches the approach used in seal/examples/frontend/src/EncryptAndUpload.tsx
 
 export interface WalrusUploadOptions {
   encryptedData: Uint8Array
   epochs?: number
   network?: "testnet" | "mainnet" | "devnet"
-  signer: Signer // Required - must provide a signer for SDK
-  deletable?: boolean // Whether blob can be deleted (default: true)
 }
 
 export interface WalrusUploadResult {
@@ -29,10 +24,29 @@ export interface WalrusUploadResult {
   }
 }
 
+// Walrus publisher URLs for testnet (from seal/examples)
+const WALRUS_PUBLISHERS = {
+  testnet: [
+    "https://publisher.walrus-testnet.walrus.space",
+    "https://walrus-testnet-publisher.redundex.com",
+    "https://walrus-testnet-publisher.nodes.guru",
+    "https://publisher.walrus.banansen.dev",
+    "https://walrus-testnet-publisher.everstake.one",
+  ],
+  mainnet: [
+    "https://publisher.walrus-mainnet.walrus.space",
+  ],
+  devnet: [
+    "https://publisher.walrus-devnet.walrus.space",
+  ],
+}
+
 /**
- * Upload encrypted data to Walrus using the official TypeScript SDK
- * This is the recommended approach as it handles all the complexity
- * of encoding, registering, uploading, and certifying blobs.
+ * Upload encrypted data to Walrus using HTTP PUT (same as seal/examples)
+ * Following the pattern from seal/examples/frontend/src/EncryptAndUpload.tsx
+ * 
+ * This simply uploads the encrypted blob via HTTP. On-chain registration
+ * is handled separately in the registry registration flow.
  */
 export async function uploadToWalrus(
   options: WalrusUploadOptions
@@ -41,105 +55,161 @@ export async function uploadToWalrus(
     encryptedData,
     epochs = 1,
     network = "testnet",
-    signer,
-    deletable = true,
   } = options
 
-  if (!signer) {
-    throw new Error("Signer is required for Walrus upload. Provide a keypair with sufficient SUI and WAL tokens.")
-  }
+  const publishers = WALRUS_PUBLISHERS[network] || WALRUS_PUBLISHERS.testnet
+  const publisherUrl = publishers[0] // Use first publisher (same as seal/examples default)
+
+  console.log(`Uploading ${encryptedData.length} bytes to Walrus (${network})...`)
+  console.log(`Using publisher: ${publisherUrl}`)
 
   try {
-    // Create Sui client extended with Walrus SDK
-    const suiClient = new SuiClient({
-      url: getFullnodeUrl(network),
-      network,
+    // Upload blob using HTTP PUT (same as seal/examples storeBlob function)
+    // Uint8Array is valid BodyInit, but TypeScript needs explicit type assertion in server-side context
+    const body: BodyInit = encryptedData as unknown as BodyInit
+    
+    const response = await fetch(`${publisherUrl}/v1/blobs?epochs=${epochs}`, {
+      method: 'PUT',
+      body: body,
+      headers: {
+        'Content-Type': 'application/octet-stream',
+      },
     })
 
-    // Check signer balance before attempting upload
-    const signerAddress = signer.toSuiAddress()
-    console.log(`Checking balance for signer: ${signerAddress}`)
-    
-    try {
-      const coins = await suiClient.getCoins({
-        owner: signerAddress,
-        coinType: "0x2::sui::SUI",
-      })
-      const totalBalance = coins.data.reduce((sum, coin) => sum + BigInt(coin.balance), BigInt(0))
-      console.log(`Signer SUI balance: ${totalBalance.toString()} MIST (${Number(totalBalance) / 1_000_000_000} SUI)`)
-      
-      if (totalBalance < BigInt(10_000_000)) { // Less than 0.01 SUI
-        console.warn("Warning: Signer has very low SUI balance. Upload may fail due to insufficient gas.")
+    if (!response.ok) {
+      // Try next publisher if available
+      if (publishers.length > 1) {
+        console.warn(`Upload failed on ${publisherUrl}, trying next publisher...`)
+        const nextPublisher = publishers[1]
+        const retryBody: BodyInit = encryptedData as unknown as BodyInit
+        const retryResponse = await fetch(`${nextPublisher}/v1/blobs?epochs=${epochs}`, {
+          method: 'PUT',
+          body: retryBody,
+          headers: {
+            'Content-Type': 'application/octet-stream',
+          },
+        })
+        
+        if (!retryResponse.ok) {
+          const errorText = await retryResponse.text().catch(() => 'Unknown error')
+          throw new Error(`Walrus upload failed: HTTP ${retryResponse.status} - ${errorText}`)
+        }
+        
+        const retryResponseData = await retryResponse.json()
+        console.log("Walrus retry response structure:", JSON.stringify(retryResponseData, null, 2))
+        
+        // Extract info wrapper (following seal/examples pattern)
+        const retryInfo = retryResponseData.info || retryResponseData
+        
+        let retryBlobId: string
+        let retryBlobObject: any
+        
+        // Handle both response formats: newlyCreated or alreadyCertified
+        if (retryInfo.newlyCreated) {
+          retryBlobId = retryInfo.newlyCreated.blobObject?.blobId || retryInfo.newlyCreated.blobObject?.blob_id
+          retryBlobObject = retryInfo.newlyCreated.blobObject
+        } else if (retryInfo.alreadyCertified) {
+          retryBlobId = retryInfo.alreadyCertified.blobId || retryInfo.alreadyCertified.blob_id
+          retryBlobObject = {
+            blobId: retryBlobId,
+            registered_epoch: retryInfo.alreadyCertified.endEpoch,
+            id: retryInfo.alreadyCertified.event?.txDigest || '',
+          }
+        } else {
+          // Fallback: try to extract from root level
+          retryBlobId = retryInfo.blobId || retryInfo.blob_id || retryResponseData.blobId || retryResponseData.blob_id
+          retryBlobObject = retryInfo.blobObject || retryInfo
+        }
+        
+        if (!retryBlobId) {
+          console.error("Could not extract blobId from retry response:", JSON.stringify(retryResponseData, null, 2))
+          throw new Error("Walrus upload succeeded but could not extract blob ID from response")
+        }
+        
+        console.log(`Successfully uploaded to Walrus (retry). Blob ID: ${retryBlobId}`)
+        
+        // Return in expected format
+        return {
+          blobId: retryBlobId,
+          blobObject: {
+            id: retryBlobObject?.id?.id || retryBlobObject?.id || '',
+            registered_epoch: retryBlobObject?.registered_epoch || 0,
+            blob_id: retryBlobObject?.blobId || retryBlobObject?.blob_id || retryBlobId,
+            size: retryBlobObject?.size || encryptedData.length.toString(),
+            storage: {
+              id: retryBlobObject?.storage?.id?.id || retryBlobObject?.storage?.id || '',
+              start_epoch: retryBlobObject?.storage?.start_epoch || 0,
+              end_epoch: retryBlobObject?.storage?.end_epoch || retryBlobObject?.storage?.endEpoch || 0,
+              storage_size: retryBlobObject?.storage?.storage_size || encryptedData.length.toString(),
+            },
+          },
+        }
       }
-    } catch (balanceError) {
-      console.warn("Could not check signer balance:", balanceError)
+      
+      const errorText = await response.text().catch(() => 'Unknown error')
+      throw new Error(`Walrus upload failed: HTTP ${response.status} - ${errorText}`)
     }
 
-    // Extend client with Walrus SDK
-    const walrusClient = suiClient.$extend(
-      walrus({
-        // Use upload relay for better performance (optional but recommended)
-        uploadRelay: {
-          host: `https://upload-relay.${network}.walrus.space`,
-          sendTip: {
-            max: 1_000_000, // Max 1 SUI tip (in MIST)
-          },
-        },
-      })
-    )
-
-    console.log(`Uploading ${encryptedData.length} bytes to Walrus (${network})...`)
-    console.log(`Using upload relay: https://upload-relay.${network}.walrus.space`)
-
-    // Use the SDK's writeBlob method which handles:
-    // 1. Encoding the blob
-    // 2. Registering on-chain
-    // 3. Uploading to storage nodes (or upload relay)
-    // 4. Certifying the blob
-    const result = await walrusClient.walrus.writeBlob({
-      blob: encryptedData,
-      epochs,
-      deletable,
-      signer,
-    })
-
-    console.log(`Successfully uploaded to Walrus. Blob ID: ${result.blobId}`)
-
+    // Parse response - Walrus returns { info: { newlyCreated: {...} } } or { info: { alreadyCertified: {...} } }
+    const responseData = await response.json()
+    console.log("Walrus response structure:", JSON.stringify(responseData, null, 2))
+    
+    // Extract info wrapper (following seal/examples pattern)
+    const info = responseData.info || responseData
+    
+    let blobId: string
+    let blobObject: any
+    
+    // Handle both response formats: newlyCreated or alreadyCertified
+    if (info.newlyCreated) {
+      blobId = info.newlyCreated.blobObject?.blobId || info.newlyCreated.blobObject?.blob_id
+      blobObject = info.newlyCreated.blobObject
+    } else if (info.alreadyCertified) {
+      blobId = info.alreadyCertified.blobId || info.alreadyCertified.blob_id
+      blobObject = {
+        blobId: blobId,
+        registered_epoch: info.alreadyCertified.endEpoch,
+        id: info.alreadyCertified.event?.txDigest || '',
+      }
+    } else {
+      // Fallback: try to extract from root level
+      blobId = info.blobId || info.blob_id || responseData.blobId || responseData.blob_id
+      blobObject = info.blobObject || info
+    }
+    
+    if (!blobId) {
+      console.error("Could not extract blobId from response:", JSON.stringify(responseData, null, 2))
+      throw new Error("Walrus upload succeeded but could not extract blob ID from response")
+    }
+    
+    console.log(`Successfully uploaded to Walrus. Blob ID: ${blobId}`)
+    
+    // Return in expected format
     return {
-      blobId: result.blobId,
+      blobId: blobId,
       blobObject: {
-        id: result.blobObject.id.id,
-        registered_epoch: result.blobObject.registered_epoch,
-        blob_id: result.blobObject.blob_id,
-        size: result.blobObject.size,
+        id: blobObject?.id?.id || blobObject?.id || '',
+        registered_epoch: blobObject?.registered_epoch || 0,
+        blob_id: blobObject?.blobId || blobObject?.blob_id || blobId,
+        size: blobObject?.size || encryptedData.length.toString(),
         storage: {
-          id: result.blobObject.storage.id.id,
-          start_epoch: result.blobObject.storage.start_epoch,
-          end_epoch: result.blobObject.storage.end_epoch,
-          storage_size: result.blobObject.storage.storage_size,
+          id: blobObject?.storage?.id?.id || blobObject?.storage?.id || '',
+          start_epoch: blobObject?.storage?.start_epoch || 0,
+          end_epoch: blobObject?.storage?.end_epoch || blobObject?.storage?.endEpoch || 0,
+          storage_size: blobObject?.storage?.storage_size || encryptedData.length.toString(),
         },
       },
     }
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error)
     const errorStack = error instanceof Error ? error.stack : undefined
-    const errorCause = error instanceof Error && error.cause ? String(error.cause) : undefined
     
-    console.error("Walrus SDK upload failed:")
+    console.error("Walrus upload failed:")
     console.error("  Message:", errorMessage)
     console.error("  Stack:", errorStack)
-    console.error("  Cause:", errorCause)
     console.error("  Full error:", error)
     
     // Check for specific error patterns
-    if (errorMessage.includes("insufficient") || errorMessage.includes("balance") || errorMessage.includes("InsufficientGas")) {
-      throw new Error(
-        `Insufficient funds: The signer needs SUI for gas and WAL tokens for storage. ` +
-        `Signer address: ${signer.toSuiAddress()}. ` +
-        `Error: ${errorMessage}`
-      )
-    }
-    
     if (errorMessage.includes("timeout") || errorMessage.includes("network") || errorMessage.includes("ECONNREFUSED") || errorMessage.includes("fetch failed")) {
       throw new Error(
         `Network error: Unable to connect to Walrus services. ` +
@@ -147,16 +217,8 @@ export async function uploadToWalrus(
         `Error: ${errorMessage}`
       )
     }
-    
-    if (errorMessage.includes("WAL") || errorMessage.includes("wal")) {
-      throw new Error(
-        `WAL token issue: ${errorMessage}. ` +
-        `The signer needs WAL tokens for storage costs. ` +
-        `Signer address: ${signer.toSuiAddress()}`
-      )
-    }
 
     // Return the full error message for debugging
-    throw new Error(`Walrus upload failed: ${errorMessage}${errorCause ? ` (Cause: ${errorCause})` : ""}`)
+    throw new Error(`Walrus upload failed: ${errorMessage}`)
   }
 }

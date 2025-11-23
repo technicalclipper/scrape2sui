@@ -39,6 +39,7 @@ node example/test-complete-flow.js
 ## Quick Start Guide
 
 See **[QUICK_START.md](./QUICK_START.md)** for step-by-step instructions on:
+
 - Purchasing AccessPass using PaywallClient SDK
 - Fetching encrypted content
 - Decrypting content with Seal SDK
@@ -46,6 +47,7 @@ See **[QUICK_START.md](./QUICK_START.md)** for step-by-step instructions on:
 ## Complete Flow
 
 The tests demonstrate the complete flow:
+
 - ✅ Hit server → Get 402 Payment Required
 - ✅ Purchase AccessPass using PaywallClient SDK (or Sui CLI)
 - ✅ Verify AccessPass on Sui
@@ -55,6 +57,7 @@ The tests demonstrate the complete flow:
 ## Prerequisites
 
 1. **Build the middleware**:
+
    ```bash
    npm run build
    ```
@@ -75,11 +78,12 @@ The tests demonstrate the complete flow:
 ## Registered Content
 
 The examples are configured to work with content registered in registry-app:
-- **Domain**: `www.krish.com`
+
+- **Domain**: `DOMAIN`
 - **Resource**: `/hidden/dog`
-- **Walrus Blob ID**: `w5HhcKzcAxbdfOoSW1Y_Xk4i1LbwiNrm6WVYJDuvNWQ`
-- **Seal Policy ID**: `3f0435b67209d368487713d895ab999271bd9e67f05cf847b7d6cdde70e48409`
-- **Resource Entry ID**: `0xcb7d2b8547d42740adbb1e81ce90aa1750bad886aed3ed50f8aefad80133b4b5`
+- **Walrus Blob ID**: `CJdVQYMwrqww9u7413CuQTDvOLaeZlurHfwkeDXSx4I`
+- **Seal Policy ID**: `c16ea2047827a5f2fca199bdacf13934539d053f4bd3a922e3c93175ba17759d8067f0ee3f`
+- **Resource Entry ID**: `0x5c6f02b39b6e02de098a68c0d72fc7a812365403f2e27e5ede2e49ff8ab34333`
 
 The server endpoint `/premium` maps to this registered content.
 
@@ -92,6 +96,7 @@ npm test
 ```
 
 **What it tests:**
+
 1. ✅ Step 1: Hit server endpoint → Get 402 Payment Required
 2. ✅ Step 2: Extract nonce, guide through purchasing AccessPass
 3. ✅ Step 3: Verify AccessPass exists on Sui

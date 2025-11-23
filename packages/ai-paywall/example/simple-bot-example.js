@@ -9,9 +9,9 @@ const bot = new PaywallClient({
 });
 
 // 2. Access protected route - that's it!
-// Note: The /premium endpoint maps to domain: www.krish.com, resource: /hidden/dog
+// Note: The /hidden/dog endpoint matches the registered resource in registry-app
 async function main() {
-  const content = await bot.access('http://localhost:3000/premium');
+  const content = await bot.access('http://localhost:3000/hidden/dog');
   console.log('✅ Content:', content);
   
   // If content is an encrypted blob, you'll need to decrypt it

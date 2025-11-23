@@ -8,12 +8,28 @@ import { toHex } from "@mysten/sui/utils"
 import crypto from "crypto"
 
 // Generate a unique policy ID based on domain and resource
-function generatePolicyId(domain: string, resource: string): string {
-  // Create a deterministic ID from domain + resource + timestamp
-  // This ensures uniqueness while being reproducible
-  const combined = `${domain}:${resource}:${Date.now()}`
-  const hash = crypto.createHash("sha256").update(combined).digest()
-  return toHex(hash)
+// Following Seal examples pattern: policyObjectBytes (32 bytes) + 5-byte random nonce
+// The policy object bytes represent a deterministic identifier for the domain+resource
+function generatePolicyId(domain: string, resource: string): { policyId: string; policyIdBytes: Uint8Array } {
+  // Create a deterministic 32-byte base from domain + resource (like a Sui object ID)
+  // This acts as our "policy object bytes" similar to an allowlist ID in seal/examples
+  const combined = `${domain}:${resource}`
+  const policyBase = crypto.createHash("sha256").update(combined).digest()
+  
+  // Ensure it's exactly 32 bytes (SHA256 already gives us 32 bytes, but being explicit)
+  if (policyBase.length !== 32) {
+    throw new Error("Policy base must be 32 bytes")
+  }
+  
+  // Following Seal examples exactly: policyObjectBytes + 5-byte random nonce
+  const nonce = crypto.getRandomValues(new Uint8Array(5))
+  const fullId = new Uint8Array([...policyBase, ...nonce])
+  
+  // Return both the hex string (for encryption) and bytes (for storage in registry)
+  return {
+    policyId: toHex(fullId),
+    policyIdBytes: fullId, // Full 37-byte ID (32 + 5)
+  }
 }
 
 export async function POST(request: NextRequest) {
@@ -113,8 +129,9 @@ export async function POST(request: NextRequest) {
     const arrayBuffer = await file.arrayBuffer()
     const fileData = new Uint8Array(arrayBuffer)
 
-    // Generate unique policy ID
-    const policyId = generatePolicyId(domain, resource)
+    // Generate unique policy ID following Seal examples pattern
+    // policyObjectBytes (32 bytes from domain+resource hash) + 5-byte random nonce
+    const { policyId, policyIdBytes } = generatePolicyId(domain, resource)
 
     // Step 1: Create Seal client and encrypt
     const sealClient = createSealClient({
@@ -131,18 +148,8 @@ export async function POST(request: NextRequest) {
       threshold,
     })
 
-    // Step 2: Upload encrypted data to Walrus using SDK
-    // This requires a signer with sufficient SUI (for gas) and WAL (for storage)
-    if (!signer) {
-      return NextResponse.json(
-        {
-          error: "Server-side Walrus upload requires SUI_SERVER_PRIVATE_KEY to be configured. " +
-                 "The signer needs SUI for gas fees and WAL tokens for storage costs.",
-        },
-        { status: 500 }
-      )
-    }
-
+    // Step 2: Upload encrypted data to Walrus using HTTP PUT (same as seal/examples)
+    // No signer needed - just upload via HTTP
     let walrusResult: { blobId: string; blobObject: any } | null = null
     
     try {
@@ -150,8 +157,6 @@ export async function POST(request: NextRequest) {
         encryptedData: encryptedObject,
         epochs: 1, // Store for 1 epoch (can be configured)
         network,
-        signer, // Required for SDK
-        deletable: true,
       })
       console.log("Successfully uploaded to Walrus:", walrusResult.blobId)
     } catch (error) {
@@ -159,7 +164,6 @@ export async function POST(request: NextRequest) {
       const errorStack = error instanceof Error ? error.stack : undefined
       console.error("Walrus upload failed:", errorMessage)
       console.error("Error stack:", errorStack)
-      console.error("Signer address:", signer?.toSuiAddress())
       
       // Return detailed error - Walrus is required
       return NextResponse.json(
@@ -167,10 +171,9 @@ export async function POST(request: NextRequest) {
           error: "Walrus upload failed",
           message: errorMessage,
           stack: errorStack,
-          signerAddress: signer?.toSuiAddress(),
           details: "The encrypted content could not be stored on Walrus. " +
-                   "Please ensure the signer has sufficient SUI (for gas) and WAL tokens (for storage). " +
-                   "Check the 'message' field above for the specific error.",
+                   "This may be a network issue or the Walrus service may be unavailable. " +
+                   "Please try again later.",
           encrypted: true,
           sealPolicy: policyId,
         },
@@ -192,7 +195,7 @@ export async function POST(request: NextRequest) {
             domain,
             resource,
             walrusCid: walrusResult.blobId,
-            sealPolicy: policyId,
+            sealPolicy: policyId, // Full policy ID (32-byte base + 5-byte nonce) as hex string
             price,
             receiver,
             maxUses,
@@ -216,7 +219,7 @@ export async function POST(request: NextRequest) {
             domain,
             resource,
             walrusCid: walrusResult.blobId,
-            sealPolicy: policyId,
+            sealPolicy: policyId, // Full policy ID (32-byte base + 5-byte nonce) as hex string
             price,
             receiver,
             maxUses,

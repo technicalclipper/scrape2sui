@@ -2,9 +2,27 @@
 // Based on Seal examples decryption flow
 
 import { SealClient, SessionKey, NoAccessError, EncryptedObject } from '@mysten/seal';
-import { SuiClient, getFullnodeUrl } from '@mysten/sui.js/client';
-import { TransactionBlock } from '@mysten/sui.js/transactions';
-import { fromHEX } from '@mysten/sui.js/utils';
+// Note: Seal requires @mysten/sui (not @mysten/sui.js) for compatibility
+// We'll try to use @mysten/sui if available, otherwise fall back to @mysten/sui.js
+let SuiClientModule: any;
+let TransactionModule: any;
+let UtilsModule: any;
+
+try {
+  // Try newer @mysten/sui package first (compatible with Seal)
+  SuiClientModule = require('@mysten/sui/client');
+  TransactionModule = require('@mysten/sui/transactions');
+  UtilsModule = require('@mysten/sui/utils');
+} catch {
+  // Fall back to older @mysten/sui.js package
+  SuiClientModule = require('@mysten/sui.js/client');
+  TransactionModule = require('@mysten/sui.js/transactions');
+  UtilsModule = require('@mysten/sui.js/utils');
+}
+
+const { SuiClient, getFullnodeUrl } = SuiClientModule;
+const { Transaction, TransactionBlock } = TransactionModule;
+const { fromHEX, fromHex } = UtilsModule;
 
 // Seal key server object IDs for testnet (from Seal examples)
 const DEFAULT_SERVER_OBJECT_IDS = [
@@ -107,8 +125,8 @@ function constructSealApproveCall(
   resourceId: string,
   accessPassId: string,
   policyIdBytes: Uint8Array
-): (tx: TransactionBlock, id: string) => void {
-  return (tx: TransactionBlock, id: string) => {
+): (tx: typeof TransactionBlock, id: string) => void {
+  return (tx: typeof TransactionBlock, id: string) => {
     // The id parameter is the full policy ID (with package prefix)
     // But seal_approve expects the id without package prefix
     // We need to extract just the policy part
@@ -185,7 +203,9 @@ export async function decryptContent(
 
   // Step 5: Convert policy ID hex string to bytes
   const normalizedPolicyId = normalizeHexString(sealPolicyId);
-  const policyIdBytes = fromHEX(normalizedPolicyId);
+  // Use fromHex if available (newer API), otherwise fromHEX
+  const hexConverter = fromHex || fromHEX;
+  const policyIdBytes = hexConverter(normalizedPolicyId);
 
   // Step 6: Build transaction with seal_approve call
   const moveCallConstructor = constructSealApproveCall(
@@ -198,7 +218,9 @@ export async function decryptContent(
 
   // Step 7: Fetch decryption keys from Seal servers
   console.log(`[Decryption] Fetching decryption keys from Seal servers...`);
-  const tx = new TransactionBlock();
+  // Use Transaction if available (newer API), otherwise TransactionBlock
+  const TxClass = Transaction || TransactionBlock;
+  const tx = new TxClass();
   moveCallConstructor(tx, fullId);
   const txBytes = await tx.build({ client: suiClient, onlyTransactionKind: true });
 

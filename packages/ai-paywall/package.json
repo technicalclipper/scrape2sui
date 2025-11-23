@@ -25,8 +25,9 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@mysten/sui.js": "^0.50.0",
-    "@mysten/seal": "^0.5.2"
+    "@mysten/seal": "^0.5.2",
+    "@mysten/sui": "^1.45.0",
+    "@mysten/sui.js": "^0.50.0"
   },
   "devDependencies": {
     "@types/express": "^4.17.21",
