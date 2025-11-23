@@ -1,8 +1,9 @@
 {
-  "packageId": "0xffac82e32d1fe9aad91100cebfa54677324cc3ee18cf04a577cb5ee6cbb0cfc2",
+  "packageId": "0xde39d60a86cd9937907be1c7bcba1f1755860a1298b3f8eb9e1883cf1a0e34ce",
   "moduleName": "paywall",
-  "treasuryId": "0xfea51bb3a5d526dee6f3098011dd2eb54353a07b5fb8f3f826b790e320ac2aae",
-  "passCounterId": "0x2191fd232443aff667c06d8bf3697544ce907a34a99bf5490ea07d42221e51a5",
+  "treasuryId": "0x884da47a8d7e74e567389ecc7571f40113fce07f61e30a523f4213810fb2ec88",
+  "passCounterId": "0x3ac3d18d060c796e0445faba0c7e28dd367b9e7f50736d717bab3f0bf2cfeb14",
+  "registryId": "0x4973302ca0f40862276bac7aca0ee7eda82d9b87f4c10bc9bc5ceb90ad28ccea",
   "network": "testnet",
   "rpcUrl": "https://fullnode.testnet.sui.io:443"
 }

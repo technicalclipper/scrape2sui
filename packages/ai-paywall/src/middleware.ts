@@ -4,8 +4,9 @@ import { Request, Response, NextFunction } from 'express';
 import { PaywallOptions, PaywallRequest, PaymentChallenge, AccessPass } from './types';
 import { PaymentRequiredError, InvalidPassError, ExpiredPassError, NoRemainingUsesError, SignatureVerificationError } from './errors';
 import { validateOptions, generateNonce, hasRequiredHeaders } from './utils/validation';
-import { fetchAccessPass, isAccessPassValid, matchesAccessPass } from './utils/sui';
+import { fetchAccessPass, isAccessPassValid, matchesAccessPass, fetchResourceEntry } from './utils/sui';
 import { verifySignature, verifyOwner } from './utils/signature';
+import { decryptContent, fetchEncryptedBlob } from './utils/decryption';
 import contractConfig from './config/contract.json';
 
 /**
@@ -108,20 +109,11 @@ export function paywall(options: PaywallOptions) {
       // Has headers - verify pass
       // Wrap in try-catch to ensure all errors are caught
       try {
-        await verifyAccess(req, res, normalizedOptions, resourcePath);
+        await verifyAccess(req, res, next, normalizedOptions, resourcePath);
         console.log(`[Paywall] Request ${requestId}: Verification passed`);
         
-        // If verification passed, continue to next middleware (or serve content)
-        // Only call next() if response hasn't been sent
-        if (!res.headersSent) {
-          console.log(`[Paywall] Request ${requestId}: Calling next()`);
-          // Call next() without return to avoid blocking
-          // Express will handle the response from the route handler
-          next();
-          return;
-        } else {
-          console.log(`[Paywall] Request ${requestId}: Headers already sent, skipping next()`);
-        }
+        // verifyAccess handles calling next() or sending response
+        return;
       } catch (verifyError: any) {
         console.error(`[Paywall] Request ${requestId}: Verification error:`, verifyError.message);
         // Re-throw to outer catch block for consistent error handling
@@ -196,6 +188,7 @@ function sendPaymentChallenge(
 async function verifyAccess(
   req: PaywallRequest,
   res: Response,
+  next: NextFunction,
   options: { price: string; receiver: string; packageId: string; treasuryId: string; passCounterId: string; domain: string; rpcUrl: string; mockContent: string },
   resource: string
 ): Promise<void> {
@@ -306,12 +299,126 @@ async function verifyAccess(
     verified: true,
   };
 
-  // For testing: serve mock content if no next middleware
-  // The actual content will be served by the route handler
-  // But we can add this as a fallback for testing
-  if (!res.headersSent) {
-    // Don't send here - let the route handler send the response
-    // This middleware just verifies and passes through
+  // Fetch and decrypt content from Walrus
+  try {
+    console.log(`[Paywall] Fetching resource entry from registry...`);
+    const resourceEntry = await fetchResourceEntry(
+      contractConfig.registryId,
+      contractConfig.packageId,
+      options.domain,
+      resource,
+      options.rpcUrl
+    );
+
+    if (!resourceEntry) {
+      console.warn(`[Paywall] Resource not found in registry, serving mock content`);
+      // Resource not registered - serve mock content or let route handler deal with it
+      if (!res.headersSent) {
+        next();
+        return;
+      }
+      return;
+    }
+
+    if (!resourceEntry.active) {
+      console.warn(`[Paywall] Resource is inactive`);
+      if (!res.headersSent) {
+        res.status(403).json({
+          error: 'ResourceInactive',
+          message: 'This resource is currently inactive',
+        });
+      }
+      return;
+    }
+
+    console.log(`[Paywall] Resource found: ${resourceEntry.walrus_cid}`);
+    console.log(`[Paywall] Fetching encrypted content from Walrus...`);
+
+    // Check if client provided SessionKey for decryption
+    const exportedSessionKey = req.headers['x-session-key'] 
+      ? JSON.parse(req.headers['x-session-key'] as string)
+      : undefined;
+
+    // Get resource ID from registry (needed for seal_approve)
+    const resourceId = resourceEntry.resource_id;
+
+    if (exportedSessionKey) {
+      // Server-side decryption
+      console.log(`[Paywall] Decrypting content server-side...`);
+      try {
+        const decryptionResult = await decryptContent({
+          packageId: contractConfig.packageId,
+          registryId: contractConfig.registryId,
+          resourceId: resourceId, // TODO: Get actual resource ID
+          accessPassId: passId,
+          walrusCid: resourceEntry.walrus_cid,
+          sealPolicyId: resourceEntry.seal_policy,
+          rpcUrl: options.rpcUrl,
+          exportedSessionKey,
+        });
+
+        // Serve decrypted content
+        if (!res.headersSent) {
+          res.setHeader('Content-Type', 'application/octet-stream');
+          res.send(Buffer.from(decryptionResult.decryptedData));
+          return;
+        }
+      } catch (decryptError: any) {
+        console.error(`[Paywall] Decryption error:`, decryptError);
+        if (!res.headersSent) {
+          res.status(500).json({
+            error: 'DecryptionFailed',
+            message: decryptError.message || 'Failed to decrypt content',
+          });
+        }
+        return;
+      }
+    } else {
+      // Return encrypted blob for client-side decryption
+      console.log(`[Paywall] Returning encrypted blob for client-side decryption...`);
+      try {
+        const encryptedBlob = await fetchEncryptedBlob(resourceEntry.walrus_cid);
+        
+        // Store encrypted blob and metadata in request for route handler
+        req.paywall = req.paywall || {};
+        req.paywall.encryptedBlob = encryptedBlob;
+        req.paywall.resourceEntry = {
+          domain: resourceEntry.domain,
+          resource: resourceEntry.resource,
+          walrus_cid: resourceEntry.walrus_cid,
+          seal_policy: resourceEntry.seal_policy,
+          price: resourceEntry.price,
+          receiver: resourceEntry.receiver,
+          max_uses: resourceEntry.max_uses,
+          validity_duration: resourceEntry.validity_duration,
+          owner: resourceEntry.owner,
+          created_at: resourceEntry.created_at,
+          active: resourceEntry.active,
+          resource_id: resourceEntry.resource_id,
+        };
+        
+        // Let route handler serve the encrypted blob or decrypt it
+        if (!res.headersSent) {
+          next();
+          return;
+        }
+      } catch (fetchError: any) {
+        console.error(`[Paywall] Failed to fetch encrypted blob:`, fetchError);
+        if (!res.headersSent) {
+          res.status(500).json({
+            error: 'FetchFailed',
+            message: fetchError.message || 'Failed to fetch encrypted content from Walrus',
+          });
+        }
+        return;
+      }
+    }
+  } catch (error: any) {
+    console.error(`[Paywall] Error fetching/decrypting content:`, error);
+    // Don't fail the request - let route handler serve mock content or handle error
+    if (!res.headersSent) {
+      next();
+    }
   }
 }
 

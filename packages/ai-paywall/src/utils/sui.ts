@@ -230,3 +230,138 @@ export function matchesAccessPass(
   
   return domainMatch && resourceMatch;
 }
+
+/**
+ * ResourceEntry interface matching the Move contract
+ */
+export interface ResourceEntry {
+  domain: string;
+  resource: string;
+  walrus_cid: string;
+  seal_policy: string;
+  price: string; // In MIST
+  receiver: string;
+  max_uses: number;
+  validity_duration: number;
+  owner: string;
+  created_at: number;
+  active: boolean;
+  resource_id: string; // ResourceEntry object ID
+}
+
+/**
+ * Fetch ResourceEntry from registry
+ */
+export async function fetchResourceEntry(
+  registryId: string,
+  packageId: string,
+  domain: string,
+  resource: string,
+  rpcUrl?: string
+): Promise<ResourceEntry | null> {
+  const client = createSuiClient(rpcUrl);
+
+  try {
+    // First, get the resource ID from the registry
+    const registry = await client.getObject({
+      id: registryId,
+      options: { showContent: true },
+    });
+
+    if (!registry.data || !registry.data.content || 'fields' in registry.data.content === false) {
+      console.error('[Sui] Registry not found or invalid');
+      return null;
+    }
+
+    // The registry has a nested table: resources: Table<String, Table<String, ID>>
+    // We need to query the dynamic fields to find the resource
+    const dynamicFields = await client.getDynamicFields({
+      parentId: registryId,
+    });
+
+    // Find the domain entry
+    let domainTableId: string | null = null;
+    for (const field of dynamicFields.data) {
+      if (field.name && typeof field.name === 'object' && 'value' in field.name) {
+        const fieldValue = field.name.value;
+        if (fieldValue === domain) {
+          domainTableId = field.objectId;
+          break;
+        }
+      }
+    }
+
+    if (!domainTableId) {
+      console.error(`[Sui] Domain not found in registry: ${domain}`);
+      return null;
+    }
+
+    // Find the resource entry in the domain table
+    const resourceDynamicFields = await client.getDynamicFields({
+      parentId: domainTableId,
+    });
+
+    let resourceId: string | null = null;
+    for (const field of resourceDynamicFields.data) {
+      if (field.name && typeof field.name === 'object' && 'value' in field.name) {
+        const fieldValue = field.name.value;
+        if (fieldValue === resource) {
+          resourceId = field.objectId;
+          break;
+        }
+      }
+    }
+
+    if (!resourceId) {
+      console.error(`[Sui] Resource not found in registry: ${domain}${resource}`);
+      return null;
+    }
+
+    // Fetch the ResourceEntry object
+    const resourceEntry = await client.getObject({
+      id: resourceId,
+      options: { showContent: true },
+    });
+
+    if (!resourceEntry.data || !resourceEntry.data.content || 'fields' in resourceEntry.data.content === false) {
+      console.error('[Sui] ResourceEntry not found or invalid');
+      return null;
+    }
+
+    const fields = (resourceEntry.data.content as any).fields;
+
+    // Helper to extract string
+    const extractString = (field: any): string => {
+      if (typeof field === 'string') return field;
+      if (field && typeof field === 'object' && 'bytes' in field) {
+        if (typeof field.bytes === 'string') {
+          try {
+            return Buffer.from(field.bytes, 'base64').toString('utf8');
+          } catch {
+            return field.bytes;
+          }
+        }
+        return String(field.bytes);
+      }
+      return String(field || '');
+    };
+
+    return {
+      domain: extractString(fields.domain),
+      resource: extractString(fields.resource),
+      walrus_cid: extractString(fields.walrus_cid),
+      seal_policy: extractString(fields.seal_policy),
+      price: String(fields.price || '0'),
+      receiver: String(fields.receiver || ''),
+      max_uses: Number(fields.max_uses || 0),
+      validity_duration: Number(fields.validity_duration || 0),
+      owner: String(fields.owner || ''),
+      created_at: Number(fields.created_at || 0),
+      active: Boolean(fields.active !== false),
+      resource_id: resourceId, // Include the resource object ID
+    };
+  } catch (error) {
+    console.error('[Sui] Error fetching ResourceEntry:', error);
+    return null;
+  }
+}

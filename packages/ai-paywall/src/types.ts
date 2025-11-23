@@ -66,6 +66,21 @@ export interface PaywallRequest extends Request {
   paywall?: {
     accessPass?: AccessPass;
     verified?: boolean;
+    encryptedBlob?: ArrayBuffer;
+    resourceEntry?: {
+      domain: string;
+      resource: string;
+      walrus_cid: string;
+      seal_policy: string;
+      price: string;
+      receiver: string;
+      max_uses: number;
+      validity_duration: number;
+      owner: string;
+      created_at: number;
+      active: boolean;
+      resource_id: string;
+    };
   };
 }
 
