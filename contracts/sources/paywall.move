@@ -88,15 +88,15 @@ public entry fun purchase_pass(
     remaining: u64,
     expiry: u64,
     nonce: vector<u8>,
-    treasury: &mut Treasury,
+    receiver: address,  // Receiver address from middleware
     counter: &mut PassCounter,
     ctx: &mut tx_context::TxContext,
 ) {
     let price = coin::value(&payment);
     assert!(price > 0, 0); // Price must be greater than 0
 
-    // Transfer payment to treasury address
-    transfer::public_transfer(coin::from_balance(coin::into_balance(payment), ctx), treasury.treasury_address);
+    // Transfer payment to receiver address (specified by middleware)
+    transfer::public_transfer(coin::from_balance(coin::into_balance(payment), ctx), receiver);
 
     // Generate unique pass ID
     let pass_id = generate_pass_id(counter);
@@ -195,5 +195,10 @@ public fun get_remaining(pass: &AccessPass): u64 {
 public fun is_expired(pass: &AccessPass, ctx: &tx_context::TxContext): bool {
     let current_time = tx_context::epoch_timestamp_ms(ctx);
     pass.expiry > 0 && current_time >= pass.expiry
+}
+
+/// View function to get treasury address
+public fun get_treasury_address(treasury: &Treasury): address {
+    treasury.treasury_address
 }
 
