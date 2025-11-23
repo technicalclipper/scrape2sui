@@ -28,7 +28,6 @@ import {
 import { verifySignature, verifyOwner } from "./utils/signature";
 import { decryptContent, fetchEncryptedBlob } from "./utils/decryption";
 import contractConfig from "./config/contract.json";
-
 /**
  * Create paywall middleware
  * Contract details are baked into the package
@@ -390,10 +389,10 @@ async function verifyAccess(
   try {
     console.log(`[Paywall] Fetching resource entry from registry...`);
     // Try to get ResourceEntry ID from environment or use known registered content
-    // For www.newkrish.com /hidden/dog, we have the ResourceEntry ID from constants.txt
+    // For DOMAIN /hidden/dog, we have the ResourceEntry ID from constants.txt
     const knownResourceEntryId =
-      options.domain === "www.newkrish.com" && resource === "/hidden/dog"
-        ? "0xd77c4f3b7807b0c50fdb0e1fe194aa384581ce9a57a667b5ba9f4d79af174738"
+      options.domain === "www.new3krish.com" && resource === "/hidden/dog"
+        ? "0x5c6f02b39b6e02de098a68c0d72fc7a812365403f2e27e5ede2e49ff8ab34333"
         : undefined;
 
     const resourceEntry = await fetchResourceEntry(

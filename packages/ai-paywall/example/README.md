@@ -79,11 +79,11 @@ The tests demonstrate the complete flow:
 
 The examples are configured to work with content registered in registry-app:
 
-- **Domain**: `www.newkrish.com`
+- **Domain**: `DOMAIN`
 - **Resource**: `/hidden/dog`
-- **Walrus Blob ID**: `LL8hDTU3rwr7OoiNVyHllGPUiLEoFPATTup2kKnaduE`
-- **Seal Policy ID**: `84aa2a83dfd9d4ccc926458b79ab1a2deac4c3f40e619ccc0e162c1f064a0e823c94668dfb`
-- **Resource Entry ID**: `0xd77c4f3b7807b0c50fdb0e1fe194aa384581ce9a57a667b5ba9f4d79af174738`
+- **Walrus Blob ID**: `CJdVQYMwrqww9u7413CuQTDvOLaeZlurHfwkeDXSx4I`
+- **Seal Policy ID**: `c16ea2047827a5f2fca199bdacf13934539d053f4bd3a922e3c93175ba17759d8067f0ee3f`
+- **Resource Entry ID**: `0x5c6f02b39b6e02de098a68c0d72fc7a812365403f2e27e5ede2e49ff8ab34333`
 
 The server endpoint `/premium` maps to this registered content.
 

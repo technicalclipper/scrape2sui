@@ -27,13 +27,13 @@ const ENDPOINT = "/hidden/dog"; // Matches registered resource in registry
 
 // Registered content constants (from registry-app)
 const REGISTERED_CONTENT = {
-  domain: "www.newkrish.com",
+  domain: "www.new3krish.com",
   resource: "/hidden/dog",
-  walrusBlobId: "LL8hDTU3rwr7OoiNVyHllGPUiLEoFPATTup2kKnaduE",
+  walrusBlobId: "CJdVQYMwrqww9u7413CuQTDvOLaeZlurHfwkeDXSx4I",
   sealPolicyId:
-    "84aa2a83dfd9d4ccc926458b79ab1a2deac4c3f40e619ccc0e162c1f064a0e823c94668dfb",
+    "c16ea2047827a5f2fca199bdacf13934539d053f4bd3a922e3c93175ba17759d8067f0ee3f",
   resourceEntryId:
-    "0xd77c4f3b7807b0c50fdb0e1fe194aa384581ce9a57a667b5ba9f4d79af174738",
+    "0x5c6f02b39b6e02de098a68c0d72fc7a812365403f2e27e5ede2e49ff8ab34333",
   walrusObjectId:
     "0x98beeefcb2c49b2648eb3289807d701623189b6eebc4ce0ee2d5879eaa767be6",
 };

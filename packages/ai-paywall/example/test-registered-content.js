@@ -3,11 +3,11 @@
  * Test with Registered Content
  *
  * This test uses the actual registered content from registry-app:
- * - Domain: www.newkrish.com
+ * - Domain: DOMAIN
  * - Resource: /hidden/dog
- * - Walrus Blob ID: LL8hDTU3rwr7OoiNVyHllGPUiLEoFPATTup2kKnaduE
- * - Seal Policy ID: 84aa2a83dfd9d4ccc926458b79ab1a2deac4c3f40e619ccc0e162c1f064a0e823c94668dfb
- * - Resource Entry ID: 0xd77c4f3b7807b0c50fdb0e1fe194aa384581ce9a57a667b5ba9f4d79af174738
+ * - Walrus Blob ID: CJdVQYMwrqww9u7413CuQTDvOLaeZlurHfwkeDXSx4I
+ * - Seal Policy ID: c16ea2047827a5f2fca199bdacf13934539d053f4bd3a922e3c93175ba17759d8067f0ee3f
+ * - Resource Entry ID: 0x5c6f02b39b6e02de098a68c0d72fc7a812365403f2e27e5ede2e49ff8ab34333
  *
  * Usage:
  *   export PRIVATE_KEY=your-private-key
@@ -19,20 +19,16 @@ const { PaywallClient } = require("../dist/index");
 const { SealClient, SessionKey, EncryptedObject } = require("@mysten/seal");
 const { SuiClient, getFullnodeUrl } = require("@mysten/sui/client");
 const { Transaction } = require("@mysten/sui/transactions");
-const { fromHex, toB64 } = require("@mysten/sui/utils");
+const { fromHex, toHex, toB64 } = require("@mysten/sui/utils");
 const contractConfig = require("../dist/config/contract.json");
-
-// Registered content from registry-app
 const REGISTERED_CONTENT = {
-  domain: "www.newkrish.com",
+  domain: "www.new3krish.com",
   resource: "/hidden/dog",
-  walrusBlobId: "LL8hDTU3rwr7OoiNVyHllGPUiLEoFPATTup2kKnaduE",
+  walrusBlobId: "CJdVQYMwrqww9u7413CuQTDvOLaeZlurHfwkeDXSx4I",
   sealPolicyId:
-    "84aa2a83dfd9d4ccc926458b79ab1a2deac4c3f40e619ccc0e162c1f064a0e823c94668dfb",
+    "c16ea2047827a5f2fca199bdacf13934539d053f4bd3a922e3c93175ba17759d8067f0ee3f",
   resourceEntryId:
-    "0xd77c4f3b7807b0c50fdb0e1fe194aa384581ce9a57a667b5ba9f4d79af174738",
-  walrusObjectId:
-    "0x98beeefcb2c49b2648eb3289807d701623189b6eebc4ce0ee2d5879eaa767be6",
+    "0x5c6f02b39b6e02de098a68c0d72fc7a812365403f2e27e5ede2e49ff8ab34333",
 };
 
 const SERVER_URL = "http://localhost:3000";
@@ -76,10 +72,83 @@ async function decryptContentWithSeal(encryptedBlob, accessPassId, client) {
     // Parse encrypted object
     const encryptedData = new Uint8Array(encryptedBlob);
     const encryptedObject = EncryptedObject.parse(encryptedData);
-    const fullId = encryptedObject.id;
     const threshold = encryptedObject.threshold;
-    log(`   Encrypted object ID: ${fullId}`, colors.cyan);
     log(`   Threshold: ${threshold}`, colors.cyan);
+
+    // EncryptedObject has separate package_id and id fields
+    // encryptedObject.id is the policy ID (37 bytes), not the full ID
+    // For Seal operations, we need the full ID (package_id + id concatenated)
+    // For seal_approve contract call, we need only the policy ID (37 bytes)
+
+    log(
+      `   Raw encryptedObject.id type: ${typeof encryptedObject.id}`,
+      colors.cyan
+    );
+    log(
+      `   Raw encryptedObject.id: ${
+        typeof encryptedObject.id === "string"
+          ? encryptedObject.id
+          : toHex(new Uint8Array(encryptedObject.id))
+      }`,
+      colors.cyan
+    );
+    log(
+      `   Raw encryptedObject.packageId: ${
+        encryptedObject.packageId || "undefined"
+      }`,
+      colors.cyan
+    );
+
+    const policyId = encryptedObject.id; // This is the 37-byte policy ID
+    const encryptedPackageId = encryptedObject.packageId || packageId; // Package ID from encrypted object or fallback
+
+    // Convert policy ID to bytes
+    let policyIdBytes;
+    if (typeof policyId === "string") {
+      const normalizedPolicyId = normalizeHexString(policyId);
+      policyIdBytes = fromHex(normalizedPolicyId);
+    } else if (policyId instanceof Uint8Array) {
+      policyIdBytes = policyId;
+    } else if (Array.isArray(policyId)) {
+      policyIdBytes = new Uint8Array(policyId);
+    } else {
+      throw new Error(`Unexpected policy ID type: ${typeof policyId}`);
+    }
+
+    // Verify policy ID is 37 bytes
+    if (policyIdBytes.length !== 37) {
+      throw new Error(
+        `Invalid policy ID length: expected 37 bytes (32-byte base + 5-byte nonce), got ${policyIdBytes.length}`
+      );
+    }
+
+    // For Seal operations, use the policy ID directly (as hex string)
+    // Seal SDK will construct the full ID internally using the package ID from EncryptedObject
+    const policyIdHex =
+      typeof policyId === "string"
+        ? normalizeHexString(policyId)
+        : toHex(policyIdBytes);
+
+    // Construct full ID for reference (package_id + policy_id)
+    // Note: Seal SDK may handle full ID construction internally, but we construct it here for completeness
+    const normalizedPackageId = normalizeHexString(encryptedPackageId);
+    const packageIdBytes = fromHex(normalizedPackageId);
+    const fullIdBytes = new Uint8Array([...packageIdBytes, ...policyIdBytes]);
+    const fullId = toHex(fullIdBytes); // Full ID as hex string
+
+    // Extract nonce (last 5 bytes of policy ID)
+    const nonceBytes = policyIdBytes.slice(-5);
+    const nonceHex = toHex(nonceBytes);
+
+    log(`   Package ID: ${encryptedPackageId}`, colors.cyan);
+    log(`   Package ID length: ${packageIdBytes.length} bytes`, colors.cyan);
+    log(`   Policy ID (37 bytes, hex): ${policyIdHex}`, colors.cyan);
+    log(`   Policy ID length: ${policyIdBytes.length} bytes`, colors.cyan);
+    log(`   Nonce (last 5 bytes, hex): ${nonceHex}`, colors.cyan);
+    log(`   Full ID (69 bytes, hex): ${fullId}`, colors.cyan);
+    log(`   Full ID length: ${fullIdBytes.length} bytes`, colors.cyan);
+    log(`   Resource Entry ID: ${resourceId}`, colors.cyan);
+    log(`   AccessPass ID: ${accessPassId}`, colors.cyan);
 
     // Create Sui and Seal clients
     const suiClient = new SuiClient({ url: getFullnodeUrl("testnet") });
@@ -146,13 +215,35 @@ async function decryptContentWithSeal(encryptedBlob, accessPassId, client) {
     await sessionKey.setPersonalMessageSignature(signatureString);
     log("   ✅ SessionKey signed", colors.green);
 
-    // Build seal_approve transaction using moveCallConstructor pattern from Seal examples
+    // Build seal_approve transaction
+    // The contract expects policy ID bytes (37 bytes), not the full ID
     log("   Building seal_approve transaction...", colors.yellow);
+    log(`   Summary of all IDs:`, colors.bright);
+    log(
+      `   ┌─────────────────────────────────────────────────────────┐`,
+      colors.bright
+    );
+    log(`   │ Package ID: ${encryptedPackageId.padEnd(65)}│`, colors.bright);
+    log(`   │ Policy ID:  ${policyIdHex.padEnd(65)}│`, colors.bright);
+    log(`   │ Nonce:      ${nonceHex.padEnd(65)}│`, colors.bright);
+    log(
+      `   │ Full ID:    ${fullId.substring(0, 65).padEnd(65)}│`,
+      colors.bright
+    );
+    log(`   │ Resource:   ${resourceId.padEnd(65)}│`, colors.bright);
+    log(`   │ AccessPass: ${accessPassId.padEnd(65)}│`, colors.bright);
+    log(
+      `   └─────────────────────────────────────────────────────────┘`,
+      colors.bright
+    );
+
     const moveCallConstructor = (tx, id) => {
+      // id parameter is the full ID (hex string) for Seal operations
+      // But for seal_approve, we pass only the policy ID bytes
       tx.moveCall({
         target: `${packageId}::registry::seal_approve`,
         arguments: [
-          tx.pure.vector("u8", fromHex(id)),
+          tx.pure.vector("u8", Array.from(policyIdBytes)), // Policy ID bytes (37 bytes)
           tx.object(resourceId),
           tx.object(accessPassId),
           tx.object("0x6"), // Clock
@@ -161,41 +252,97 @@ async function decryptContentWithSeal(encryptedBlob, accessPassId, client) {
     };
 
     const tx = new Transaction();
-    moveCallConstructor(tx, fullId);
+    moveCallConstructor(tx, policyIdHex);
     const txBytes = await tx.build({
       client: suiClient,
       onlyTransactionKind: true,
     });
 
+    // Log transaction bytes for debugging
+    const txBytesHex = toHex(txBytes);
+    const txBytesLength = txBytes.length;
+    log("   Transaction built for seal_approve", colors.cyan);
+    log(`   Transaction bytes length: ${txBytesLength} bytes`, colors.cyan);
+    log(
+      `   Transaction bytes (hex, first 100 chars): ${txBytesHex.substring(
+        0,
+        100
+      )}...`,
+      colors.cyan
+    );
+
     // Fetch decryption keys
+    // Use full ID (package_id + policy_id) for Seal operations
     log("   Fetching decryption keys from Seal servers...", colors.yellow);
+    log(`   Using Full ID for fetchKeys: ${fullId}`, colors.yellow);
+    log(`   Full ID length: ${fullId.length / 2} bytes (hex)`, colors.yellow);
+    log(`   Using same txBytes (length: ${txBytesLength})`, colors.yellow);
     try {
       await sealClient.fetchKeys({
-        ids: [fullId],
+        ids: [fullId], // Use full ID (69 bytes) for Seal operations
         txBytes,
         sessionKey,
         threshold: threshold,
       });
       log("   ✅ Keys fetched successfully", colors.green);
     } catch (err) {
-      log(`   ❌ Failed to fetch keys: ${err.message}`, colors.red);
+      const errorMsg =
+        err instanceof Error ? err.message : String(err) || "Unknown error";
+      log(`   ❌ Failed to fetch keys: ${errorMsg}`, colors.red);
+      if (err && typeof err === "object" && "stack" in err) {
+        log(`   Stack: ${String(err.stack)}`, colors.yellow);
+      }
       throw err;
     }
 
-    // Decrypt content - rebuild transaction like Seal examples
+    // Decrypt content - use the SAME transaction bytes as fetchKeys
+    // Seal verifies the nonce using the transaction bytes, so they must match exactly
     log("   Decrypting content...", colors.yellow);
-    try {
-      const decryptTx = new Transaction();
-      moveCallConstructor(decryptTx, fullId);
-      const decryptTxBytes = await decryptTx.build({
-        client: suiClient,
-        onlyTransactionKind: true,
-      });
+    log(
+      `   Using Full ID for decrypt (implicit from encryptedData)`,
+      colors.yellow
+    );
+    log(
+      `   Encrypted data length: ${encryptedData.length} bytes`,
+      colors.yellow
+    );
 
+    // Verify transaction bytes are the same (critical for nonce verification)
+    const txBytesHexForVerify = toHex(txBytes);
+    log(`   Using SAME txBytes (length: ${txBytesLength})`, colors.yellow);
+    log(
+      `   Transaction bytes hex (first 200 chars): ${txBytesHexForVerify.substring(
+        0,
+        200
+      )}...`,
+      colors.yellow
+    );
+    log(
+      `   Transaction bytes hex (last 100 chars): ...${txBytesHexForVerify.substring(
+        Math.max(0, txBytesHexForVerify.length - 100)
+      )}`,
+      colors.yellow
+    );
+
+    // Re-verify all IDs before decryption
+    log(`   Verification before decrypt:`, colors.cyan);
+    log(
+      `     - Package ID: ${encryptedPackageId} (${packageIdBytes.length} bytes)`,
+      colors.cyan
+    );
+    log(
+      `     - Policy ID: ${policyIdHex} (${policyIdBytes.length} bytes)`,
+      colors.cyan
+    );
+    log(`     - Nonce: ${nonceHex} (${nonceBytes.length} bytes)`, colors.cyan);
+    log(`     - Full ID: ${fullId} (${fullIdBytes.length} bytes)`, colors.cyan);
+    log(`     - Resource ID: ${resourceId}`, colors.cyan);
+    log(`     - AccessPass ID: ${accessPassId}`, colors.cyan);
+    try {
       const decryptedData = await sealClient.decrypt({
         data: encryptedData,
         sessionKey,
-        txBytes: decryptTxBytes,
+        txBytes: txBytes, // Use the EXACT same txBytes as fetchKeys
       });
       log(
         `   ✅ Content decrypted (${decryptedData.length} bytes)`,
@@ -203,14 +350,21 @@ async function decryptContentWithSeal(encryptedBlob, accessPassId, client) {
       );
       return decryptedData;
     } catch (err) {
-      log(`   ❌ Decryption failed: ${err.message}`, colors.red);
+      const errorMsg =
+        err instanceof Error ? err.message : String(err) || "Unknown error";
+      log(`   ❌ Decryption failed: ${errorMsg}`, colors.red);
+      if (err && typeof err === "object" && "stack" in err) {
+        log(`   Stack: ${String(err.stack)}`, colors.yellow);
+      }
       throw err;
     }
   } catch (error) {
-    log(`   ❌ Decryption error: ${error.message}`, colors.red);
-    if (error.stack) {
+    const errorMsg =
+      error instanceof Error ? error.message : String(error) || "Unknown error";
+    log(`   ❌ Decryption error: ${errorMsg}`, colors.red);
+    if (error && typeof error === "object" && "stack" in error) {
       log(
-        `   Stack: ${error.stack.split("\n").slice(0, 3).join("\n")}`,
+        `   Stack: ${String(error.stack).split("\n").slice(0, 3).join("\n")}`,
         colors.yellow
       );
     }
@@ -309,8 +463,8 @@ async function main() {
       log("   ⚠️  No AccessPass found - cannot decrypt", colors.yellow);
       log("   Saving encrypted blob for manual decryption...", colors.yellow);
       const fs = require("fs");
-      fs.writeFileSync("encrypted-content.bin", Buffer.from(encryptedBlob));
-      log("   ✅ Saved to: encrypted-content.bin", colors.green);
+      fs.writeFileSync("encrypted-new-content.bin", Buffer.from(encryptedBlob));
+      log("   ✅ Saved to: encrypted-new-content.bin", colors.green);
       return;
     }
 
@@ -386,8 +540,8 @@ async function main() {
         colors.yellow
       );
       const fs = require("fs");
-      fs.writeFileSync("encrypted-content.bin", Buffer.from(encryptedBlob));
-      log("   ✅ Saved to: encrypted-content.bin", colors.green);
+      fs.writeFileSync("encrypted-new-content.bin", Buffer.from(encryptedBlob));
+      log("   ✅ Saved to: encrypted-new-content.bin", colors.green);
       log(`   Error: ${decryptError.message}`, colors.red);
     }
 

@@ -3,6 +3,15 @@
 
 const express = require("express");
 const { paywall } = require("../dist/index"); // Use built dist, or '../src/index' if using ts-node
+const REGISTERED_CONTENT = {
+  domain: "www.new3krish.com",
+  resource: "/hidden/dog",
+  walrusBlobId: "CJdVQYMwrqww9u7413CuQTDvOLaeZlurHfwkeDXSx4I",
+  sealPolicyId:
+    "c16ea2047827a5f2fca199bdacf13934539d053f4bd3a922e3c93175ba17759d8067f0ee3f",
+  resourceEntryId:
+    "0x5c6f02b39b6e02de098a68c0d72fc7a812365403f2e27e5ede2e49ff8ab34333",
+};
 
 const app = express();
 app.use(express.json());
@@ -42,7 +51,7 @@ app.use((req, res, next) => {
 // You only need: price, receiver (wallet address), domain!
 //
 // This endpoint matches the registered content in registry-app:
-// - Domain: www.newkrish.com
+// - Domain: DOMAIN
 // - Resource: /hidden/dog
 // - Registered in registry-app with Seal encryption
 app.use(
@@ -51,7 +60,7 @@ app.use(
     price: "0.01", // 0.01 SUI
     receiver:
       "0x043d0499d17b09ffffd91a3eebb684553ca7255e273c69ed72e355950e0d77be", // Your wallet address - where payments go
-    domain: "www.newkrish.com", // Must match registered domain in registry-app
+    domain: REGISTERED_CONTENT.domain, // Must match registered domain in registry-app
   })
 );
 
@@ -88,10 +97,10 @@ app.get("/hidden/dog", async (req, res) => {
         const resourceEntry = await fetchResourceEntry(
           contractConfig.registryId,
           contractConfig.packageId,
-          "www.newkrish.com",
+          REGISTERED_CONTENT.domain,
           "/hidden/dog",
           contractConfig.rpcUrl,
-          "0xd77c4f3b7807b0c50fdb0e1fe194aa384581ce9a57a667b5ba9f4d79af174738" // Direct ResourceEntry ID
+          "0x5c6f02b39b6e02de098a68c0d72fc7a812365403f2e27e5ede2e49ff8ab34333" // Direct ResourceEntry ID
         );
 
         if (resourceEntry && resourceEntry.active) {

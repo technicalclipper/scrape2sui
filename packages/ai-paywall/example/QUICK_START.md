@@ -28,7 +28,7 @@ export PRIVATE_KEY=your-sui-private-key
 
 **Note**: The server is configured to use registered content:
 
-- Domain: `www.newkrish.com`
+- Domain: `DOMAIN`
 - Resource: `/hidden/dog`
 - This content is encrypted with Seal and stored on Walrus
 
