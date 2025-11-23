@@ -11,25 +11,21 @@ const inter = Inter({
 })
 
 export const metadata: Metadata = {
-  title: "sui2scrape - AI Paywall System for Web Content",
+  title: "sui2scrape | Make AI Agents Pay with x402 to Scrape",
   description:
-    "Enforce payment for AI agents and bots accessing your premium content. Built on Sui, Walrus, and Seal with the x402 payment protocol.",
+    "Protect and monetize your content from AI scrapers. Enforce on-chain payments using x402 protocol. Built on Sui, Walrus & Seal.",
   icons: {
     icon: [
       {
-        url: "/icon-light-32x32.png",
-        media: "(prefers-color-scheme: light)",
-      },
-      {
-        url: "/icon-dark-32x32.png",
-        media: "(prefers-color-scheme: dark)",
-      },
-      {
-        url: "/icon.svg",
+        url: "/favicon.svg",
         type: "image/svg+xml",
       },
+      {
+        url: "/walrus-logo-main.png",
+        type: "image/png",
+      },
     ],
-    apple: "/apple-icon.png",
+    apple: "/walrus-logo-main.png",
   },
 }
 

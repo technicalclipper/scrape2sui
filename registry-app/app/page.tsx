@@ -110,7 +110,7 @@ export default function Home() {
                 className="pixel-text text-lg px-10 h-14 bg-white text-black border-2 border-black hover:bg-gray-100 hover:border-gray-500 uppercase tracking-wider font-mono"
                 asChild
               >
-                <Link href="/registry">REGISTER NOW</Link>
+                <Link href="/registry">START NOW!</Link>
               </Button>
             </div>
 
