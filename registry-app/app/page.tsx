@@ -75,7 +75,11 @@ export default function Home() {
                 className="silver-gradient"
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.8, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
+                transition={{
+                  duration: 0.8,
+                  delay: 0.2,
+                  ease: [0.22, 1, 0.36, 1],
+                }}
               >
                 PAY TO SCRAPE
               </motion.span>
@@ -86,10 +90,17 @@ export default function Home() {
               className="text-base md:text-lg text-muted-foreground mb-10 text-pretty max-w-2xl mx-auto leading-relaxed font-mono"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 0.4, ease: [0.22, 1, 0.36, 1] }}
+              transition={{
+                duration: 0.8,
+                delay: 0.4,
+                ease: [0.22, 1, 0.36, 1],
+              }}
             >
-              Universal paywall system that enforces on-chain payments from bots and AI agents using the{" "}
-              <span className="text-foreground font-bold">x402 payment protocol</span>
+              Universal paywall system that enforces on-chain payments from bots
+              and AI agents using the{" "}
+              <span className="text-foreground font-bold">
+                x402 payment protocol
+              </span>
             </motion.p>
 
             {/* CTA Buttons */}
@@ -99,11 +110,11 @@ export default function Home() {
                 className="pixel-text text-lg px-10 h-14 bg-black text-white border-2 border-black hover:bg-gray-900 hover:border-gray-500 transition-all group uppercase tracking-wider font-mono"
                 asChild
               >
-                <Link href="#">
+                <Link href="https://www.npmjs.com/package/ai-paywall" target="_blank" rel="noopener noreferrer">
                   INSTALL PACKAGE
                   <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
-              </Link>
-            </Button>
+                </Link>
+              </Button>
               <Button
                 size="lg"
                 variant="outline"
@@ -123,14 +134,18 @@ export default function Home() {
                     <div className="w-3 h-3 rounded-full bg-yellow-500" />
                     <div className="w-3 h-3 rounded-full bg-green-500" />
                   </div>
-                  <span className="text-sm text-gray-300 ml-4 font-mono font-bold">middleware.js</span>
+                  <span className="text-sm text-gray-300 ml-4 font-mono font-bold">
+                    middleware.js
+                  </span>
                 </div>
                 <div className="p-6 text-left bg-black">
                   <pre className="font-mono text-sm leading-relaxed">
                     <code className="text-gray-100">
                       <span className="text-blue-100">const</span>{" "}
-                      <span className="text-gray-300">{"{"}</span> <span className="text-yellow-100">paywall</span>{" "}
-                      <span className="text-gray-300">{"}"}</span> <span className="text-gray-400">=</span>{" "}
+                      <span className="text-gray-300">{"{"}</span>{" "}
+                      <span className="text-yellow-100">paywall</span>{" "}
+                      <span className="text-gray-300">{"}"}</span>{" "}
+                      <span className="text-gray-400">=</span>{" "}
                       <span className="text-blue-100">require</span>
                       <span className="text-gray-300">(</span>
                       <span className="text-green-100">"ai-paywall"</span>
@@ -175,13 +190,12 @@ export default function Home() {
             >
               <h2 className="pixel-text text-4xl md:text-5xl lg:text-6xl mb-6 text-balance leading-tight">
                 AI IS SCRAPING YOUR PREMIUM CONTENT{" "}
-                <span className="text-foreground">
-                  FOR FREE
-                </span>
+                <span className="text-foreground">FOR FREE</span>
               </h2>
               <p className="text-base md:text-lg text-muted-foreground text-pretty max-w-2xl mx-auto leading-relaxed">
-                Bots, crawlers, and AI agents are accessing your research, APIs, and datasets without permission or
-                payment. There's no standard enforcement mechanism.
+                Bots, crawlers, and AI agents are accessing your research, APIs,
+                and datasets without permission or payment. There's no standard
+                enforcement mechanism.
               </p>
             </motion.div>
 
@@ -193,22 +207,29 @@ export default function Home() {
                   <div className="w-12 h-12 border-2 border-black bg-white flex items-center justify-center mb-6">
                     <span className="text-2xl">❌</span>
                   </div>
-                  <h3 className="pixel-text text-xl md:text-2xl mb-4">WITHOUT SUI2SCRAPE</h3>
+                  <h3 className="pixel-text text-xl md:text-2xl mb-4">
+                    WITHOUT SUI2SCRAPE
+                  </h3>
                   <ul className="space-y-4">
-                    {[              
+                    {[
                       "No way to monetize content accessed by bots and crawlers",
                       "Your research and APIs become free training data for AI models",
                       "Zero control over who accesses your content or how often",
                       "Content theft with no recourse or attribution",
                     ].map((item, i) => (
-                      <li key={i} className="flex items-start gap-3 text-foreground">
+                      <li
+                        key={i}
+                        className="flex items-start gap-3 text-foreground"
+                      >
                         <div className="w-1.5 h-1.5 rounded-full bg-black mt-2 flex-shrink-0" />
-                        <span className="text-base leading-relaxed font-mono">{item}</span>
+                        <span className="text-base leading-relaxed font-mono">
+                          {item}
+                        </span>
                       </li>
                     ))}
                   </ul>
                 </div>
-          </Card>
+              </Card>
 
               {/* With scrape2sui */}
               <Card className="relative overflow-hidden bg-black border-2 border-black text-white">
@@ -217,7 +238,9 @@ export default function Home() {
                   <div className="w-12 h-12 border-2 border-gray-400 bg-black flex items-center justify-center mb-6">
                     <Check className="w-7 h-7 text-gray-400" />
                   </div>
-                  <h3 className="pixel-text text-xl md:text-2xl mb-4 text-white">WITH SUI2SCRAPE</h3>
+                  <h3 className="pixel-text text-xl md:text-2xl mb-4 text-white">
+                    WITH SUI2SCRAPE
+                  </h3>
                   <ul className="space-y-4">
                     {[
                       "Pay-before-access enforcement via x402",
@@ -225,9 +248,14 @@ export default function Home() {
                       "Configurable usage limits and rate control",
                       "End-to-end content encryption via Seal",
                     ].map((item, i) => (
-                      <li key={i} className="flex items-start gap-3 text-gray-200">
+                      <li
+                        key={i}
+                        className="flex items-start gap-3 text-gray-200"
+                      >
                         <Check className="w-5 h-5 text-gray-400 mt-0.5 flex-shrink-0" />
-                        <span className="text-base leading-relaxed font-mono">{item}</span>
+                        <span className="text-base leading-relaxed font-mono">
+                          {item}
+                        </span>
                       </li>
                     ))}
                   </ul>
@@ -242,7 +270,9 @@ export default function Home() {
       <section id="how-it-works" className="py-20 md:py-32 bg-gray-50">
         <div className="container mx-auto px-6">
           <div className="text-center mb-20">
-            <h2 className="pixel-text text-4xl md:text-5xl lg:text-6xl mb-6 text-balance leading-tight">HOW IT WORKS</h2>
+            <h2 className="pixel-text text-4xl md:text-5xl lg:text-6xl mb-6 text-balance leading-tight">
+              HOW IT WORKS
+            </h2>
             <p className="text-xl text-muted-foreground max-w-3xl mx-auto text-pretty leading-relaxed">
               A seamless end-to-end flow from content upload to AI agent payment
             </p>
@@ -254,7 +284,9 @@ export default function Home() {
               {/* Architecture Image */}
               <div className="lg:sticky lg:top-24">
                 <Card className="p-4 md:p-6 bg-white border-2 border-black">
-                  <h3 className="pixel-text text-xl md:text-2xl mb-4 md:mb-6 text-center">SYSTEM ARCHITECTURE</h3>
+                  <h3 className="pixel-text text-xl md:text-2xl mb-4 md:mb-6 text-center">
+                    SYSTEM ARCHITECTURE
+                  </h3>
                   <div className="relative w-full overflow-hidden">
                     <Image
                       src="/architecture.png"
@@ -320,8 +352,12 @@ export default function Home() {
                       {item.step}
                     </div>
                     <div className="flex-1 pt-1 md:pt-3">
-                      <h3 className="pixel-text text-lg md:text-xl mb-2 md:mb-3">{item.title.toUpperCase()}</h3>
-                      <p className="text-muted-foreground text-sm md:text-base leading-relaxed font-mono">{item.description}</p>
+                      <h3 className="pixel-text text-lg md:text-xl mb-2 md:mb-3">
+                        {item.title.toUpperCase()}
+                      </h3>
+                      <p className="text-muted-foreground text-sm md:text-base leading-relaxed font-mono">
+                        {item.description}
+                      </p>
                     </div>
                   </motion.div>
                 ))}
@@ -340,7 +376,8 @@ export default function Home() {
                 INTEGRATE IN MINUTES, NOT DAYS
               </h2>
               <p className="text-base md:text-lg text-muted-foreground text-pretty max-w-2xl mx-auto leading-relaxed">
-                Add AI payment enforcement to your existing application with minimal code changes
+                Add AI payment enforcement to your existing application with
+                minimal code changes
               </p>
             </div>
 
@@ -356,7 +393,9 @@ export default function Home() {
                 <Card className="bg-black border-2 border-black overflow-hidden">
                   <div className="p-6">
                     <pre className="font-mono text-sm">
-                      <code className="text-gray-400">npm install ai-paywall</code>
+                      <code className="text-gray-400">
+                        npm install ai-paywall
+                      </code>
                     </pre>
                   </div>
                 </Card>
@@ -368,15 +407,19 @@ export default function Home() {
                   <div className="w-8 h-8 border-2 border-black bg-black text-white flex items-center justify-center text-sm font-bold font-mono">
                     2
                   </div>
-                  <h3 className="pixel-text text-lg">ADD THE MIDDLEWARE TO YOUR ROUTES</h3>
+                  <h3 className="pixel-text text-lg">
+                    ADD THE MIDDLEWARE TO YOUR ROUTES
+                  </h3>
                 </div>
                 <Card className="bg-black border-2 border-black overflow-hidden">
                   <div className="p-6">
                     <pre className="font-mono text-sm leading-relaxed">
                       <code>
                         <span className="text-gray-500">const</span>{" "}
-                        <span className="text-gray-400">{"{"}</span> <span className="text-gray-300">paywall</span>{" "}
-                        <span className="text-gray-400">{"}"}</span> <span className="text-gray-500">=</span>{" "}
+                        <span className="text-gray-400">{"{"}</span>{" "}
+                        <span className="text-gray-300">paywall</span>{" "}
+                        <span className="text-gray-400">{"}"}</span>{" "}
+                        <span className="text-gray-500">=</span>{" "}
                         <span className="text-gray-200">require</span>
                         <span className="text-gray-400">(</span>
                         <span className="text-gray-200">"ai-paywall"</span>
@@ -396,7 +439,9 @@ export default function Home() {
                         <span className="text-gray-400">,</span>
                         {"\n  "}
                         <span className="text-gray-400">receiver: </span>
-                        <span className="text-gray-200">"0xYourSuiAddress"</span>
+                        <span className="text-gray-200">
+                          "0xYourSuiAddress"
+                        </span>
                         <span className="text-gray-400">,</span>
                         {"\n  "}
                         <span className="text-gray-400">domain: </span>
@@ -419,17 +464,20 @@ export default function Home() {
                   <div className="w-8 h-8 border-2 border-black bg-black text-white flex items-center justify-center text-sm font-bold font-mono">
                     3
                   </div>
-                  <h3 className="pixel-text text-lg">THAT'S IT! YOUR CONTENT IS NOW PROTECTED</h3>
+                  <h3 className="pixel-text text-lg">
+                    THAT'S IT! YOUR CONTENT IS NOW PROTECTED
+                  </h3>
                 </div>
                 <Card className="bg-white border-2 border-black">
                   <div className="p-6">
                     <p className="text-foreground leading-relaxed font-mono">
-                      AI agents will now receive payment instructions when they try to access your protected routes.
-                      After successful payment, they'll receive an AccessPass and gain access to your premium
-                      content.
+                      AI agents will now receive payment instructions when they
+                      try to access your protected routes. After successful
+                      payment, they'll receive an AccessPass and gain access to
+                      your premium content.
                     </p>
                   </div>
-          </Card>
+                </Card>
               </div>
             </div>
           </div>
@@ -450,7 +498,8 @@ export default function Home() {
               EVERYTHING YOU NEED TO PROTECT & MONETIZE
             </h2>
             <p className="text-xl text-muted-foreground max-w-3xl mx-auto text-pretty leading-relaxed">
-              A complete solution for content creators, API providers, and data publishers
+              A complete solution for content creators, API providers, and data
+              publishers
             </p>
           </motion.div>
 
@@ -459,7 +508,8 @@ export default function Home() {
               {
                 icon: Lock,
                 title: "Encrypted Storage",
-                description: "Content encrypted with Seal, stored on Walrus. Only paid users can decrypt and access.",
+                description:
+                  "Content encrypted with Seal, stored on Walrus. Only paid users can decrypt and access.",
               },
               {
                 icon: Coins,
@@ -470,32 +520,38 @@ export default function Home() {
               {
                 icon: Code2,
                 title: "NPM Middleware",
-                description: "Simple one-line integration for any Node.js, Express, or Next.js application.",
+                description:
+                  "Simple one-line integration for any Node.js, Express, or Next.js application.",
               },
               {
                 icon: Key,
                 title: "x402 Protocol",
-                description: 'Standard "402 Payment Required" flow designed specifically for AI agents and bots.',
+                description:
+                  'Standard "402 Payment Required" flow designed specifically for AI agents and bots.',
               },
               {
                 icon: Database,
                 title: "Decentralized Storage",
-                description: "Built on Walrus for reliable, censorship-resistant content delivery at scale.",
+                description:
+                  "Built on Walrus for reliable, censorship-resistant content delivery at scale.",
               },
               {
                 icon: Shield,
                 title: "Access Control",
-                description: "Fine-grained permissions with time limits, usage caps, and domain restrictions.",
+                description:
+                  "Fine-grained permissions with time limits, usage caps, and domain restrictions.",
               },
               {
                 icon: Zap,
                 title: "Lightning Fast",
-                description: "Optimized verification flow with sub-second payment confirmation and content delivery.",
+                description:
+                  "Optimized verification flow with sub-second payment confirmation and content delivery.",
               },
               {
                 icon: Sparkles,
                 title: "Web3 Native",
-                description: "Fully decentralized infrastructure with no central authority or single point of failure.",
+                description:
+                  "Fully decentralized infrastructure with no central authority or single point of failure.",
               },
             ].map((feature, i) => (
               <motion.div
@@ -503,17 +559,23 @@ export default function Home() {
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, margin: "-50px" }}
-                transition={{ duration: 0.5, delay: i * 0.1, ease: [0.22, 1, 0.36, 1] }}
+                transition={{
+                  duration: 0.5,
+                  delay: i * 0.1,
+                  ease: [0.22, 1, 0.36, 1],
+                }}
               >
-                <Card
-                  className="p-6 bg-white border-2 border-black hover:border-gray-500 transition-all duration-300 hover:shadow-lg group"
-                >
-                <div className="w-12 h-12 border-2 border-black bg-white flex items-center justify-center mb-4 group-hover:bg-gray-100 transition-all">
-                  <feature.icon className="w-6 h-6 text-black" />
-                </div>
-                <h3 className="pixel-text text-lg mb-2">{feature.title.toUpperCase()}</h3>
-                <p className="text-sm text-muted-foreground leading-relaxed font-mono">{feature.description}</p>
-              </Card>
+                <Card className="p-6 bg-white border-2 border-black hover:border-gray-500 transition-all duration-300 hover:shadow-lg group">
+                  <div className="w-12 h-12 border-2 border-black bg-white flex items-center justify-center mb-4 group-hover:bg-gray-100 transition-all">
+                    <feature.icon className="w-6 h-6 text-black" />
+                  </div>
+                  <h3 className="pixel-text text-lg mb-2">
+                    {feature.title.toUpperCase()}
+                  </h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed font-mono">
+                    {feature.description}
+                  </p>
+                </Card>
               </motion.div>
             ))}
           </div>
@@ -528,7 +590,8 @@ export default function Home() {
               POWERED BY SUI, WALRUS & SEAL
             </h2>
             <p className="text-xl text-muted-foreground max-w-3xl mx-auto text-pretty leading-relaxed font-mono">
-              Blockchain payments, decentralized storage, and encryption working together to protect your content
+              Blockchain payments, decentralized storage, and encryption working
+              together to protect your content
             </p>
           </div>
 
@@ -570,9 +633,13 @@ export default function Home() {
                     <tech.icon className="w-8 h-8 text-black" />
                   ) : null}
                 </div>
-                <h3 className="pixel-text text-xl md:text-2xl mb-4">{tech.title.toUpperCase()}</h3>
-                <p className="text-muted-foreground leading-relaxed font-mono">{tech.description}</p>
-          </Card>
+                <h3 className="pixel-text text-xl md:text-2xl mb-4">
+                  {tech.title.toUpperCase()}
+                </h3>
+                <p className="text-muted-foreground leading-relaxed font-mono">
+                  {tech.description}
+                </p>
+              </Card>
             ))}
           </div>
         </div>
@@ -586,7 +653,8 @@ export default function Home() {
               READY TO MONETIZE YOUR CONTENT?
             </h2>
             <p className="text-xl text-gray-300 mb-12 text-pretty max-w-2xl mx-auto leading-relaxed font-mono">
-              Join the future of content protection and start earning from AI agents accessing your premium data.
+              Join the future of content protection and start earning from AI
+              agents accessing your premium data.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
               <Button
@@ -605,7 +673,11 @@ export default function Home() {
                 className="pixel-text text-lg px-10 h-14 bg-black text-white border-2 border-white hover:bg-gray-900 hover:border-gray-400 uppercase tracking-wider font-mono"
                 asChild
               >
-                <a href="https://github.com/technicalclipper/scrape2sui" target="_blank" rel="noopener noreferrer">
+                <a
+                  href="https://github.com/technicalclipper/scrape2sui"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
                   VIEW ON GITHUB
                 </a>
               </Button>
@@ -631,11 +703,12 @@ export default function Home() {
               <span className="pixel-text text-xl font-bold">SUI2SCRAPE</span>
             </div>
             <p className="text-sm text-muted-foreground font-mono uppercase tracking-wider">
-              © 2025 SUI2SCRAPE. POWERED BY SUI, WALRUS & SEAL. BUILT FOR THE AI ERA.
+              © 2025 SUI2SCRAPE. POWERED BY SUI, WALRUS & SEAL. BUILT FOR THE AI
+              ERA.
             </p>
+          </div>
         </div>
-      </div>
       </footer>
     </div>
-  )
+  );
 }
