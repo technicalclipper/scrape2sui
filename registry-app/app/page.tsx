@@ -135,12 +135,20 @@ export default function Home() {
                     <div className="w-3 h-3 rounded-full bg-green-500" />
                   </div>
                   <span className="text-sm text-gray-300 ml-4 font-mono font-bold">
-                    middleware.js
+                    server.js
                   </span>
                 </div>
                 <div className="p-6 text-left bg-black">
                   <pre className="font-mono text-sm leading-relaxed">
                     <code className="text-gray-100">
+                      <span className="text-blue-100">const</span>{" "}
+                      <span className="text-gray-200">express</span>{" "}
+                      <span className="text-gray-400">=</span>{" "}
+                      <span className="text-blue-100">require</span>
+                      <span className="text-gray-300">(</span>
+                      <span className="text-green-100">"express"</span>
+                      <span className="text-gray-300">);</span>
+                      {"\n"}
                       <span className="text-blue-100">const</span>{" "}
                       <span className="text-gray-300">{"{"}</span>{" "}
                       <span className="text-yellow-100">paywall</span>{" "}
@@ -151,21 +159,31 @@ export default function Home() {
                       <span className="text-green-100">"ai-paywall"</span>
                       <span className="text-gray-300">);</span>
                       {"\n\n"}
+                      <span className="text-blue-100">const</span>{" "}
+                      <span className="text-gray-200">app</span>{" "}
+                      <span className="text-gray-400">=</span>{" "}
+                      <span className="text-blue-100">express</span>
+                      <span className="text-gray-300">();</span>
+                      {"\n\n"}
                       <span className="text-gray-200">app</span>
                       <span className="text-gray-400">.</span>
                       <span className="text-blue-100">use</span>
                       <span className="text-gray-300">(</span>
-                      <span className="text-green-100">"/premium"</span>
+                      <span className="text-green-100">"/hidden/dog"</span>
                       <span className="text-gray-300">, </span>
                       <span className="text-yellow-100">paywall</span>
                       <span className="text-gray-300">({"{"}</span>
                       {"\n  "}
                       <span className="text-gray-300">price: </span>
-                      <span className="text-green-100">"0.1"</span>
+                      <span className="text-green-100">"0.01"</span>
                       <span className="text-gray-300">,</span>
                       {"\n  "}
                       <span className="text-gray-300">receiver: </span>
-                      <span className="text-green-100">"0xABC123"</span>
+                      <span className="text-green-100">"0x..."</span>
+                      <span className="text-gray-300">,</span>
+                      {"\n  "}
+                      <span className="text-gray-300">domain: </span>
+                      <span className="text-green-100">"www.demo1.com"</span>
                       {"\n"}
                       <span className="text-gray-300">{"}));"}</span>
                     </code>
@@ -416,6 +434,14 @@ export default function Home() {
                     <pre className="font-mono text-sm leading-relaxed">
                       <code>
                         <span className="text-gray-500">const</span>{" "}
+                        <span className="text-gray-200">express</span>{" "}
+                        <span className="text-gray-500">=</span>{" "}
+                        <span className="text-gray-200">require</span>
+                        <span className="text-gray-400">(</span>
+                        <span className="text-gray-200">"express"</span>
+                        <span className="text-gray-400">);</span>
+                        {"\n"}
+                        <span className="text-gray-500">const</span>{" "}
                         <span className="text-gray-400">{"{"}</span>{" "}
                         <span className="text-gray-300">paywall</span>{" "}
                         <span className="text-gray-400">{"}"}</span>{" "}
@@ -425,33 +451,58 @@ export default function Home() {
                         <span className="text-gray-200">"ai-paywall"</span>
                         <span className="text-gray-400">);</span>
                         {"\n\n"}
-                        <span className="text-gray-300">app</span>
+                        <span className="text-gray-500">const</span>{" "}
+                        <span className="text-gray-200">app</span>{" "}
+                        <span className="text-gray-500">=</span>{" "}
+                        <span className="text-gray-200">express</span>
+                        <span className="text-gray-400">();</span>
+                        {"\n\n"}
+                        <span className="text-gray-200">app</span>
                         <span className="text-gray-500">.</span>
                         <span className="text-gray-200">use</span>
                         <span className="text-gray-400">(</span>
-                        <span className="text-gray-200">"/api/premium"</span>
+                        <span className="text-gray-200">"/hidden/dog"</span>
                         <span className="text-gray-400">, </span>
                         <span className="text-gray-300">paywall</span>
                         <span className="text-gray-400">({"{"}</span>
                         {"\n  "}
                         <span className="text-gray-400">price: </span>
-                        <span className="text-gray-200">"0.1"</span>
+                        <span className="text-gray-200">"0.01"</span>
                         <span className="text-gray-400">,</span>
                         {"\n  "}
                         <span className="text-gray-400">receiver: </span>
-                        <span className="text-gray-200">
-                          "0xYourSuiAddress"
-                        </span>
+                        <span className="text-gray-200">"0x..."</span>
                         <span className="text-gray-400">,</span>
                         {"\n  "}
                         <span className="text-gray-400">domain: </span>
-                        <span className="text-gray-200">"yoursite.com"</span>
-                        <span className="text-gray-400">,</span>
-                        {"\n  "}
-                        <span className="text-gray-400">usageLimit: </span>
-                        <span className="text-gray-300">100</span>
+                        <span className="text-gray-200">"www.demo1.com"</span>
                         {"\n"}
                         <span className="text-gray-400">{"}));"}</span>
+                        {"\n\n"}
+                        <span className="text-gray-200">app</span>
+                        <span className="text-gray-500">.</span>
+                        <span className="text-gray-200">get</span>
+                        <span className="text-gray-400">(</span>
+                        <span className="text-gray-200">"/hidden/dog"</span>
+                        <span className="text-gray-400">, (</span>
+                        <span className="text-gray-300">req</span>
+                        <span className="text-gray-400">, </span>
+                        <span className="text-gray-300">res</span>
+                        <span className="text-gray-400">) =&gt; </span>
+                        <span className="text-gray-400">{"{"}</span>
+                        {"\n  "}
+                        <span className="text-gray-300">res</span>
+                        <span className="text-gray-500">.</span>
+                        <span className="text-gray-200">send</span>
+                        <span className="text-gray-400">(</span>
+                        <span className="text-gray-300">req</span>
+                        <span className="text-gray-500">.</span>
+                        <span className="text-gray-300">paywall</span>
+                        <span className="text-gray-500">?.</span>
+                        <span className="text-gray-300">encryptedBlob</span>
+                        <span className="text-gray-400">);</span>
+                        {"\n"}
+                        <span className="text-gray-400">{"});"}</span>
                       </code>
                     </pre>
                   </div>

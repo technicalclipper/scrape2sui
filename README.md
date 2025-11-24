@@ -1,6 +1,6 @@
 # Sui2Scrape
 
-**Pay-Before-Access Infrastructure for Premium Content**
+**x402-Enforced Payments for AI Agents and Automated Systems**
 
 A production-ready blockchain payment system that enforces on-chain payments before AI agents, bots, and automated systems can access premium content. Built on Sui blockchain with encrypted storage on Walrus and decryption via Seal.
 
@@ -23,7 +23,7 @@ Traditional paywalls fail against automated systems. IP-based blocking is ineffe
 
 ## Solution
 
-Sui2Scrape establishes a **verifiable payment protocol** where access to encrypted content requires on-chain proof of payment. The system combines:
+Sui2Scrape implements the **x402 payment protocol**—an open standard for HTTP 402 payments. The system establishes a **verifiable payment protocol** where access to encrypted content requires on-chain proof of payment. The system combines:
 
 - **Sui blockchain** for payment verification and access control
 - **Walrus decentralized storage** for encrypted content hosting
@@ -135,7 +135,7 @@ When an AI agent requests `/premium`, the middleware:
 
 **3. Payment Challenge**
 
-The 402 response includes payment details:
+Following the x402 protocol, the middleware responds with HTTP 402 Payment Required. The response includes payment details:
 
 ```json
 {
@@ -689,6 +689,7 @@ if (response.status === 402) {
 ### Blockchain
 
 - **Network**: Sui Testnet (production deployment targets mainnet)
+- **Package ID**: `0xde39d60a86cd9937907be1c7bcba1f1755860a1298b3f8eb9e1883cf1a0e34ce`
 - **Contracts**:
   - Registry: [contracts/sources/registry.move](contracts/sources/registry.move)
   - Paywall: [contracts/sources/paywall.move](contracts/sources/paywall.move)
@@ -713,8 +714,9 @@ if (response.status === 402) {
 ### Middleware
 
 - **Framework**: Express.js
+- **Protocol**: x402 Payment Protocol
 - **Response Codes**:
-  - `402 Payment Required` - No valid AccessPass
+  - `402 Payment Required` - x402 protocol payment challenge (no valid AccessPass)
   - `200 OK` - Access granted, content served
   - `403 Forbidden` - Invalid or expired pass
 - **Headers**:
@@ -893,6 +895,7 @@ ISC License - see [LICENSE](LICENSE) for details.
 
 ## Links
 
+- **x402 Protocol**: [x402.org](https://www.x402.org)
 - **NPM Package**: [ai-paywall](https://www.npmjs.com/package/ai-paywall)
 - **GitHub**: [technicalclipper/scrape2sui](https://github.com/technicalclipper/scrape2sui)
 - **Documentation**: [sui2scrape.vercel.app](https://sui2scrape.vercel.app/)
