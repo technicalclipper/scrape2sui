@@ -22,6 +22,15 @@
  * changing server code or environment variables!
  */
 
+// Load `.env` files into `process.env` when running the example locally.
+// This is optional — if `dotenv` isn't installed, code continues and users
+// can export environment variables manually as shown in the file's Usage.
+try {
+  require("dotenv").config();
+} catch (e) {
+  // ignore: `dotenv` is optional for example users
+}
+
 const express = require("express");
 const { paywall } = require("../dist/index");
 
