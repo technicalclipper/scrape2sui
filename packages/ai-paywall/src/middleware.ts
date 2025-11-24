@@ -52,6 +52,7 @@ export function paywall(options: PaywallOptions) {
     price: options.price,
     receiver: options.receiver, // User's wallet address
     domain: options.domain,
+    resourceEntryId: options.resourceEntryId, // Optional: ResourceEntry ID for optimization (fetches from registry if not provided)
     packageId: contractConfig.packageId, // From package config
     treasuryId: contractConfig.treasuryId, // From package config
     passCounterId: contractConfig.passCounterId, // From package config
@@ -262,6 +263,7 @@ async function verifyAccess(
     treasuryId: string;
     passCounterId: string;
     domain: string;
+    resourceEntryId?: string;
     rpcUrl: string;
     mockContent: string;
   },
@@ -388,22 +390,16 @@ async function verifyAccess(
   // Fetch and decrypt content from Walrus
   try {
     console.log(`[Paywall] Fetching resource entry from registry...`);
-    // Try to get ResourceEntry ID from environment variable
-    // If domain and resource match the configured values, use the resource entry ID from env
-    const configuredDomain = process.env.WALRUS_DOMAIN || "www.demo1.com";
-    const configuredResource = process.env.WALRUS_RESOURCE || "/hidden/dog";
-    const knownResourceEntryId =
-      options.domain === configuredDomain && resource === configuredResource
-        ? (process.env.RESOURCE_ENTRY_ID || "0x44ace4be0c2ca4bf48bdb4f6a8069ff2beb73c3b33409035cffefa160ff40f5d")
-        : undefined;
-
+    // Query registry on-chain by domain and resource
+    // ResourceEntry ID can be provided in options as an optimization (optional cache),
+    // but the middleware will always query the registry to find it dynamically
     const resourceEntry = await fetchResourceEntry(
       contractConfig.registryId,
       contractConfig.packageId,
       options.domain,
       resource,
       options.rpcUrl,
-      knownResourceEntryId // Pass direct ResourceEntry ID as fallback
+      options.resourceEntryId // Optional: if provided, fetch directly (optimization cache)
     );
 
     if (!resourceEntry) {
