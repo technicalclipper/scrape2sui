@@ -17,6 +17,12 @@
  *   node example/new-client-example.js
  */
 
+try {
+  require("dotenv").config();
+} catch (e) {
+  // ignore: `dotenv` is optional for example users
+}
+
 const { PaywallClient } = require('../dist/index');
 const fs = require('fs');
 const path = require('path');
