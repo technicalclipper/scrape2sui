@@ -6,14 +6,22 @@ import { Request, Response, NextFunction } from 'express';
  * Options for configuring the paywall middleware
  * Contract details are baked into the package
  * User only needs to provide: price, receiver (wallet address), domain
+ * 
+ * The middleware will automatically query the registry on-chain to find ResourceEntry
+ * by domain and resource. Providing resourceEntryId is optional but can speed up lookups.
  */
 export interface PaywallOptions {
   /** Price in SUI (e.g., "0.1" for 0.1 SUI) */
   price: string;
   /** Receiver wallet address - where payments go */
   receiver: string;
-  /** Domain name (e.g., "www.example.com") */
+  /** Domain name (e.g., "www.example.com") - must match registry registration */
   domain: string;
+  /** 
+   * Optional: ResourceEntry object ID from registry (optimization cache)
+   * If not provided, middleware will query registry on-chain by domain/resource
+   */
+  resourceEntryId?: string;
   /** Mock content to serve after verification (optional, for testing) */
   mockContent?: string;
 }
