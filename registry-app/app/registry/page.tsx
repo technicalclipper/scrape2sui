@@ -2,7 +2,8 @@
 
 import * as React from "react"
 import { useState } from "react"
-import { Upload, Lock, Database, CheckCircle2, Loader2, AlertCircle } from "lucide-react"
+import Link from "next/link"
+import { Upload, Lock, Database, CheckCircle2, Loader2, AlertCircle, ArrowLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -135,21 +136,29 @@ export default function RegistryPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/20 p-4 md:p-8">
+    <div className="min-h-screen bg-white p-4 md:p-8">
       <div className="max-w-4xl mx-auto space-y-6">
         {/* Header */}
+        <div className="flex items-center gap-4 mb-4">
+          <Button variant="outline" size="sm" className="border-2 border-black hover:bg-gray-100" asChild>
+            <Link href="/">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Home
+            </Link>
+          </Button>
+        </div>
         <div className="text-center space-y-2">
-          <h1 className="text-4xl font-bold tracking-tight">Content Registry</h1>
-          <p className="text-muted-foreground">
+          <h1 className="pixel-text text-4xl font-bold tracking-tight">CONTENT REGISTRY</h1>
+          <p className="text-muted-foreground font-mono">
             Encrypt your content with Seal and store it on Walrus
           </p>
         </div>
 
         {/* Main Form Card */}
-        <Card>
+        <Card className="border-2 border-black bg-white">
           <CardHeader>
-            <CardTitle>Register New Content</CardTitle>
-            <CardDescription>
+            <CardTitle className="pixel-text">REGISTER NEW CONTENT</CardTitle>
+            <CardDescription className="font-mono">
               Upload a file to encrypt and store. This content will be protected behind the paywall.
             </CardDescription>
           </CardHeader>
@@ -347,8 +356,8 @@ export default function RegistryPage() {
                         </div>
                       )}
                     </div>
-                    <Button type="button" onClick={resetForm} className="w-full">
-                      Register Another File
+                    <Button type="button" onClick={resetForm} className="w-full pixel-text bg-white text-black border-2 border-black hover:bg-gray-100 hover:border-gray-500 uppercase tracking-wider font-mono">
+                      REGISTER ANOTHER FILE
                     </Button>
                   </CardContent>
                 </Card>
@@ -358,7 +367,7 @@ export default function RegistryPage() {
               {processStep !== "success" && (
                 <Button
                   type="submit"
-                  className="w-full"
+                  className="w-full pixel-text bg-black text-white border-2 border-black hover:bg-gray-900 hover:border-gray-500 uppercase tracking-wider font-mono"
                   disabled={
                     !selectedFile ||
                     !domain.trim() ||
@@ -369,16 +378,16 @@ export default function RegistryPage() {
                   {processStep === "idle" && (
                     <>
                       <Lock className="h-4 w-4 mr-2" />
-                      Encrypt & Register
+                      ENCRYPT & REGISTER
                     </>
                   )}
                   {(processStep === "uploading" || processStep === "encrypting" || processStep === "storing" || processStep === "registering") && (
                     <>
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Processing...
+                      PROCESSING...
                     </>
                   )}
-                  {processStep === "error" && "Try Again"}
+                  {processStep === "error" && "TRY AGAIN"}
                 </Button>
               )}
             </form>
@@ -387,29 +396,29 @@ export default function RegistryPage() {
 
         {/* Info Cards */}
         <div className="grid gap-4 md:grid-cols-2">
-          <Card>
+          <Card className="border-2 border-black bg-white">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-lg">
+              <CardTitle className="pixel-text flex items-center gap-2 text-lg">
                 <Lock className="h-5 w-5" />
-                Seal Encryption
+                SEAL ENCRYPTION
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-muted-foreground font-mono">
                 Your content is encrypted using Seal's key management system. Only authorized users with valid AccessPass can decrypt.
               </p>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="border-2 border-black bg-black text-white">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-lg">
+              <CardTitle className="pixel-text flex items-center gap-2 text-lg text-white">
                 <Database className="h-5 w-5" />
-                Walrus Storage
+                WALRUS STORAGE
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-gray-300 font-mono">
                 Encrypted content is stored on Walrus decentralized storage. The CID is registered on-chain for access control.
               </p>
             </CardContent>
