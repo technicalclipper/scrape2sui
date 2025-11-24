@@ -9,6 +9,41 @@ A production-ready blockchain payment system that enforces on-chain payments bef
 
 ---
 
+## Table of Contents
+
+- [Problem](#problem)
+- [Solution](#solution)
+- [Architecture](#architecture)
+  - [Core Components](#core-components)
+- [How It Works](#how-it-works)
+  - [End-to-End Flow](#end-to-end-flow)
+- [Implementation Deep Dive](#implementation-deep-dive)
+  - [Sui Move Contracts](#sui-move-contracts)
+  - [Walrus Integration](#walrus-integration)
+  - [Seal Encryption](#seal-encryption)
+  - [NPM Middleware](#npm-middleware)
+  - [Client SDK](#client-sdk)
+- [Getting Started](#getting-started)
+  - [Installation](#installation)
+  - [Content Owner Setup](#content-owner-setup)
+  - [AI Agent Integration](#ai-agent-integration)
+- [Technical Specifications](#technical-specifications)
+  - [Blockchain](#blockchain)
+  - [Storage](#storage)
+  - [Encryption](#encryption)
+  - [Middleware](#middleware)
+  - [SDK](#sdk)
+- [Project Structure](#project-structure)
+- [Security Considerations](#security-considerations)
+- [Performance](#performance)
+- [Roadmap](#roadmap)
+- [Contributing](#contributing)
+- [License](#license)
+- [Links](#links)
+- [Support](#support)
+
+---
+
 ## Problem
 
 AI agents, web scrapers, and automated systems freely access valuable content without compensation:
