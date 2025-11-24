@@ -499,6 +499,14 @@ async function verifyAccess(
           resource_id: resourceEntry.resource_id,
         };
 
+        // Set headers for client to use (before calling next())
+        // These headers allow clients to decrypt without needing to know ResourceEntry ID
+        if (!res.headersSent) {
+          res.setHeader('X-Resource-Entry-ID', resourceEntry.resource_id);
+          res.setHeader('X-Walrus-CID', resourceEntry.walrus_cid);
+          res.setHeader('X-Seal-Policy', resourceEntry.seal_policy);
+        }
+
         // Let route handler serve the encrypted blob or decrypt it
         if (!res.headersSent) {
           next();

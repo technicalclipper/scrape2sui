@@ -164,12 +164,13 @@ const client = new PaywallClient({
   privateKey: process.env.PRIVATE_KEY,
 });
 
-// Option 1: Access and decrypt in one call
+// Option 1: Access and decrypt in one call (server provides ResourceEntry ID via headers)
 const decrypted = await client.accessAndDecrypt(
   'http://localhost:3000/hidden/dog',
-  process.env.WALRUS_DOMAIN,
-  process.env.WALRUS_RESOURCE,
-  process.env.RESOURCE_ENTRY_ID
+  process.env.WALRUS_DOMAIN || 'www.demo1.com',
+  process.env.WALRUS_RESOURCE || '/hidden/dog'
+  // Note: ResourceEntry ID is automatically extracted from server response headers
+  // No need to provide RESOURCE_ENTRY_ID - server sends it via X-Resource-Entry-ID header
 );
 
 // Save decrypted content (automatically detects file type: .jpg, .png, .txt, etc.)
@@ -276,6 +277,7 @@ The middleware throws custom errors:
 
 ## Documentation
 
-- **[ARCHITECTURE.md](./ARCHITECTURE.md)** - Complete system architecture explanation
-- See `INTEGRATION_GUIDE.md` for detailed integration instructions.
+- **[ARCHITECTURE.md](./ARCHITECTURE.md)** - Complete system architecture explanation covering all components, flows, and security features
+- **[SERVER_SETUP_GUIDE.md](./SERVER_SETUP_GUIDE.md)** - Step-by-step guide for setting up a new server with registered content
+- **[example/README.md](./example/README.md)** - Guide to example scripts
 

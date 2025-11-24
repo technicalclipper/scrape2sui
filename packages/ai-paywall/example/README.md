@@ -2,10 +2,76 @@
 
 This directory contains essential example scripts demonstrating the ai-paywall package.
 
+## Quick Start
+
+### Setting Up a New Server
+
+If you've already registered content in registry-app and want to serve it:
+
+```bash
+# 1. Set your registered content details
+export WALRUS_DOMAIN=www.yourdomain.com
+export WALRUS_RESOURCE=/your/resource/path
+export RECEIVER_ADDRESS=0x...    # Your wallet address
+
+# 2. Run the example server
+node example/new-server-example.js
+
+# 3. Test it
+curl http://localhost:3000/your/resource/path  # Should return 402
+```
+
+See **[SERVER_SETUP_GUIDE.md](../SERVER_SETUP_GUIDE.md)** for complete setup instructions.
+
+### Using PaywallClient (Client Example)
+
+If you want to access protected content as a client:
+
+```bash
+# 1. Set your client configuration
+export PRIVATE_KEY=your-private-key
+export SERVER_URL=http://localhost:3000
+export WALRUS_DOMAIN=www.yourdomain.com
+export WALRUS_RESOURCE=/your/resource/path
+
+# 2. Run the client example
+node example/new-client-example.js
+```
+
+The client will automatically:
+- Handle 402 payment required
+- Purchase AccessPass if needed
+- Sign headers and authenticate
+- Get encrypted content
+- Decrypt using Seal (ResourceEntry ID from server headers)
+
+See **[new-client-example.js](./new-client-example.js)** for the complete example.
+
 ## Core Examples
 
+### `new-server-example.js` ⭐ NEW
+Minimal example showing how to set up a new server with registered content.
+
+```bash
+export WALRUS_DOMAIN=www.yourdomain.com
+export WALRUS_RESOURCE=/your/resource/path
+export RECEIVER_ADDRESS=0x...
+node example/new-server-example.js
+```
+
+### `new-client-example.js` ⭐ NEW
+Simple client example showing how to use PaywallClient to access protected content.
+
+```bash
+export PRIVATE_KEY=your-private-key
+export SERVER_URL=http://localhost:3000
+export WALRUS_DOMAIN=www.yourdomain.com
+export WALRUS_RESOURCE=/your/resource/path
+node example/new-client-example.js
+```
+
 ### `server.js`
-Express server example showing how to use the paywall middleware.
+Full-featured Express server example with detailed error handling.
 
 ```bash
 node example/server.js

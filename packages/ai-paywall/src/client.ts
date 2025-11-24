@@ -521,7 +521,7 @@ export class PaywallClient {
         tx.pure(options.remaining, 'u64'),
         tx.pure(options.expiry, 'u64'),
         tx.pure(nonceBytes, 'vector<u8>'),
-        tx.pure(options.receiver),
+        tx.pure.address(options.receiver), // Receiver address - use .address() helper
         tx.object(contractConfig.passCounterId),
       ],
     });
@@ -695,7 +695,7 @@ export class PaywallClient {
         tx.pure(options.remaining, 'u64'),
         tx.pure(options.expiry, 'u64'),
         tx.pure(nonceBytes, 'vector<u8>'),
-        tx.pure(options.receiver), // Receiver address
+        tx.pure.address(options.receiver), // Receiver address - use .address() helper
         tx.object(contractConfig.passCounterId), // PassCounter
       ],
     });
@@ -863,7 +863,7 @@ export class PaywallClient {
       autoDecrypt?: {
         domain: string;
         resource: string;
-        resourceEntryId: string;
+        resourceEntryId?: string; // Optional: if not provided, will be extracted from response headers
       };
     }
   ): Promise<any> {
@@ -1015,9 +1015,20 @@ export class PaywallClient {
             if (options?.autoDecrypt && (content instanceof ArrayBuffer || Buffer.isBuffer(content) || content instanceof Uint8Array)) {
               console.log(`[PaywallClient] Auto-decrypting content...`);
               try {
+                // Get resourceEntryId from headers if not provided in options
+                let resourceEntryId = options.autoDecrypt.resourceEntryId;
+                if (!resourceEntryId) {
+                  const headerValue = contentResponse.headers.get('X-Resource-Entry-ID');
+                  resourceEntryId = headerValue || undefined;
+                  if (!resourceEntryId) {
+                    throw new Error('ResourceEntry ID not found in response headers. Server must provide X-Resource-Entry-ID header.');
+                  }
+                  console.log(`[PaywallClient] Using ResourceEntry ID from server headers: ${resourceEntryId}`);
+                }
+                
                 const decrypted = await this.decrypt(
                   content,
-                  options.autoDecrypt.resourceEntryId,
+                  resourceEntryId,
                   accessPassId!
                 );
                 return decrypted;
@@ -1274,21 +1285,21 @@ export class PaywallClient {
    * 
    * This is a convenience method that combines access() and decrypt().
    * It automatically fetches encrypted content and decrypts it using Seal.
+   * The ResourceEntry ID is automatically extracted from server response headers.
    * 
    * @param url - The protected route URL
    * @param domain - The domain registered in the registry
    * @param resource - The resource path registered in the registry
-   * @param resourceEntryId - The ResourceEntry object ID (can use env var RESOURCE_ENTRY_ID)
-   * @param options - Optional: retry attempts, timeout, etc.
+   * @param options - Optional: retry attempts, timeout, resourceEntryId (fallback if header missing)
    * @returns Decrypted content as Uint8Array
    * 
    * @example
    * ```javascript
+   * // Server provides ResourceEntry ID via X-Resource-Entry-ID header
    * const decrypted = await client.accessAndDecrypt(
    *   'http://example.com/premium',
    *   'www.example.com',
-   *   '/premium',
-   *   process.env.RESOURCE_ENTRY_ID
+   *   '/premium'
    * );
    * ```
    */
@@ -1296,34 +1307,131 @@ export class PaywallClient {
     url: string,
     domain: string,
     resource: string,
-    resourceEntryId: string,
     options?: {
       retries?: number;
       timeout?: number;
+      resourceEntryId?: string; // Optional fallback if server doesn't provide header
     }
   ): Promise<Uint8Array> {
-    // Step 1: Access the content (gets encrypted blob)
-    const content = await this.access(url, options);
+    const maxRetries = options?.retries || 1;
+    const timeout = options?.timeout || 30000;
 
-    // Check if content is encrypted blob
-    let encryptedBlob: ArrayBuffer | Uint8Array;
-    if (Buffer.isBuffer(content) || content instanceof ArrayBuffer) {
-      encryptedBlob = content;
-    } else if (content instanceof Uint8Array) {
-      encryptedBlob = content;
-    } else {
-      throw new Error(`Expected encrypted blob, got ${typeof content}`);
+    // Step 1: Access the content and capture response headers
+    let resourceEntryId: string | undefined = options?.resourceEntryId;
+    let accessPassId: string | undefined;
+    let encryptedBlob: ArrayBuffer | Uint8Array | undefined;
+
+    // Use access() with autoDecrypt disabled initially so we can capture headers
+    // We'll make our own request to get headers
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      try {
+        // First, get access pass (may need to purchase)
+        const foundPass = await this.findExistingAccessPass(domain, resource);
+        accessPassId = foundPass || undefined;
+        
+        if (!accessPassId) {
+          // No pass yet - access() will handle purchasing
+          // Make initial request to get 402 and purchase pass
+          const initialResponse = await fetch(url, {
+            method: 'GET',
+            headers: { 'Connection': 'close' },
+            signal: AbortSignal.timeout(timeout),
+          });
+
+          if (initialResponse.status === 402) {
+            const challenge = await initialResponse.json() as PaymentChallenge;
+            const normalizedResource = challenge.resource === '/' ? '/' : challenge.resource.replace(/\/$/, '');
+            
+            console.log(`[PaywallClient] Purchasing AccessPass...`);
+            accessPassId = await this.purchaseAccessPass({
+              price: challenge.price,
+              domain: challenge.domain,
+              resource: normalizedResource,
+              remaining: 10,
+              expiry: 0,
+              nonce: challenge.nonce,
+              receiver: challenge.receiver,
+            });
+            
+            await new Promise(resolve => setTimeout(resolve, 2000));
+          }
+        }
+
+        if (!accessPassId) {
+          throw new Error(`No AccessPass found for ${domain}${resource}`);
+        }
+
+        // Now make authenticated request to get content and headers
+        const timestamp = Date.now().toString();
+        const signature = await this.signMessage(
+          accessPassId,
+          domain,
+          resource.replace(/\/$/, '') || resource,
+          timestamp
+        );
+
+        const headers = {
+          'x-pass-id': accessPassId,
+          'x-signer': this.keypair.toSuiAddress(),
+          'x-sig': signature,
+          'x-ts': timestamp,
+          'Connection': 'close',
+        };
+
+        const contentResponse = await fetch(url, {
+          method: 'GET',
+          headers,
+          signal: AbortSignal.timeout(timeout),
+        });
+
+        if (contentResponse.status !== 200) {
+          throw new Error(`Unexpected status: ${contentResponse.status}`);
+        }
+
+        // Extract ResourceEntry ID from headers (server provides this)
+        if (!resourceEntryId) {
+          const headerValue = contentResponse.headers.get('X-Resource-Entry-ID');
+          if (!headerValue) {
+            throw new Error(
+              'ResourceEntry ID not found in response headers (X-Resource-Entry-ID). ' +
+              'Make sure your server is configured to send this header, or provide it as an option.'
+            );
+          }
+          resourceEntryId = headerValue;
+          console.log(`[PaywallClient] Using ResourceEntry ID from server: ${resourceEntryId}`);
+        }
+
+        // Get encrypted blob
+        const contentType = contentResponse.headers.get('content-type');
+        if (contentType && contentType.includes('application/octet-stream')) {
+          encryptedBlob = await contentResponse.arrayBuffer();
+        } else {
+          // Try to parse as binary
+          encryptedBlob = await contentResponse.arrayBuffer();
+        }
+
+        // Consume AccessPass
+        try {
+          await this.consumeAccessPass(accessPassId);
+        } catch (consumeError) {
+          console.error(`[PaywallClient] Warning: Failed to consume AccessPass:`, consumeError);
+        }
+
+        break; // Success
+      } catch (error: any) {
+        if (attempt === maxRetries - 1) {
+          throw error;
+        }
+        console.log(`[PaywallClient] Attempt ${attempt + 1} failed, retrying...`);
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
     }
 
-    // Step 2: Find AccessPass for this domain/resource
-    const accessPassId = await this.findExistingAccessPass(domain, resource);
-    if (!accessPassId) {
-      throw new Error(
-        `No AccessPass found for ${domain}${resource}. Make sure you have purchased an AccessPass first.`
-      );
+    if (!encryptedBlob || !resourceEntryId || !accessPassId) {
+      throw new Error('Failed to get encrypted content, ResourceEntry ID, or AccessPass');
     }
 
-    // Step 3: Decrypt the content
+    // Step 2: Decrypt the content
     return await this.decrypt(encryptedBlob, resourceEntryId, accessPassId);
   }
 }
